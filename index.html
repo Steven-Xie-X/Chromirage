@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>缤纷叠影 - 精确小三角形版</title>
+    <title>缤纷叠影 - 精准匹配版</title>
     <style>
         :root {
             --bg-color: #1a1c2c;
@@ -121,7 +121,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 5px;
             padding: 0 10px;
         }
 
@@ -143,6 +143,62 @@
             transition: width 0.3s ease-out, background 0.3s;
         }
         .progress-text { font-size: 13px; color: #ccc; width: 45px; text-align: right; }
+
+        /* --- 拨动开关 --- */
+        .toggle-container {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 0 10px;
+            font-size: 13px;
+            color: #ccc;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255,255,255,0.2);
+            transition: .3s;
+            border-radius: 22px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #fff;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(18px);
+        }
 
         .game-container {
             display: flex;
@@ -341,6 +397,15 @@
         <div class="progress-text" id="progress-text">0%</div>
     </div>
 
+    <!-- 拨动开关 -->
+    <div class="toggle-container">
+        <span>仅显示匹配色块</span>
+        <label class="switch">
+            <input type="checkbox" id="match-toggle">
+            <span class="slider"></span>
+        </label>
+    </div>
+
     <div class="game-container">
         
         <div class="board-header">
@@ -397,7 +462,8 @@
                 1. <b>拖动盘面</b>：决定折痕位置，程序会根据您的起点自动判断保留哪一侧，并用<b>红色高亮</b>框出。<br>
                 2. <b>锁定方向</b>：点击撤回键右侧的图标，可锁定特定方向的折痕。<br>
                 3. <b>双击确认</b>：选定折痕后，必须在盘面上快速<b>双击</b>，才会真正执行翻折动画。<br>
-                4. <b>目标</b>：将彩色盘面折叠成下方“目标图形”。
+                4. <b>辅助开关</b>：打开“仅显示匹配色块”，盘面将隐藏所有拼错的色块，方便定位。<br>
+                5. <b>目标</b>：将彩色盘面折叠成下方“目标图形”。
             </p>
             <button class="btn" onclick="closeRules()">我知道了</button>
         </div>
@@ -438,7 +504,6 @@
         let isHintMode = false;
         let solutionSteps = []; 
         
-        // 交互与动画状态
         let isDragging = false;
         let hasDragged = false;
         let startPos = { x: 0, y: 0 };
@@ -447,6 +512,7 @@
         let pendingAction = null;   
         let lastTap = 0;            
         let lockedAxis = null; 
+        let showOnlyMatched = false; // 新增：控制是否仅显示匹配色块
 
         let isAnimating = false;
         let animationState = {
@@ -465,6 +531,7 @@
         const toastEl = document.getElementById('toast');
         const hintBtn = document.getElementById('hint-btn');
         const overlay = document.getElementById('overlay');
+        const matchToggle = document.getElementById('match-toggle');
         
         const undoBtn = document.getElementById('undo-btn');
         const redoBtn = document.getElementById('redo-btn');
@@ -483,6 +550,18 @@
             'M': document.getElementById('axis-m'),
             'A': document.getElementById('axis-a')
         };
+
+        // 开关事件监听
+        matchToggle.addEventListener('change', (e) => {
+            showOnlyMatched = e.target.checked;
+            refreshBothBoards();
+        });
+
+        function refreshBothBoards() {
+            renderGame();
+            // 重绘目标面板，如果开启对比，传入 currentGrid 作为比较基准
+            drawBoard(tCtx, targetGrid, showOnlyMatched ? currentGrid : null);
+        }
 
         function setLockedAxis(axis) {
             if (lockedAxis === axis) {
@@ -554,24 +633,23 @@
             return count;
         }
 
-        // 【终极算法】精确到小三角形的对称折叠
         function applyFold(grid, action) {
             const newGrid = deepCopyGrid(grid);
             const { axis, k, side } = action;
 
             function getTriangleIndex(fx, fy) {
-                if (Math.abs(fx - 0.5) < 0.01 && Math.abs(fy - 0.25) < 0.01) return 0; // 上
-                if (Math.abs(fx - 0.75) < 0.01 && Math.abs(fy - 0.5) < 0.01) return 1; // 右
-                if (Math.abs(fx - 0.5) < 0.01 && Math.abs(fy - 0.75) < 0.01) return 2; // 下
-                if (Math.abs(fx - 0.25) < 0.01 && Math.abs(fy - 0.5) < 0.01) return 3; // 左
+                if (Math.abs(fx - 0.5) < 0.01 && Math.abs(fy - 0.25) < 0.01) return 0; 
+                if (Math.abs(fx - 0.75) < 0.01 && Math.abs(fy - 0.5) < 0.01) return 1; 
+                if (Math.abs(fx - 0.5) < 0.01 && Math.abs(fy - 0.75) < 0.01) return 2; 
+                if (Math.abs(fx - 0.25) < 0.01 && Math.abs(fy - 0.5) < 0.01) return 3; 
                 return 0;
             }
 
             const centers = [
-                { dx: 0.5, dy: 0.25 }, // 上
-                { dx: 0.75, dy: 0.5 }, // 右
-                { dx: 0.5, dy: 0.75 }, // 下
-                { dx: 0.25, dy: 0.5 }  // 左
+                { dx: 0.5, dy: 0.25 }, 
+                { dx: 0.75, dy: 0.5 }, 
+                { dx: 0.5, dy: 0.75 }, 
+                { dx: 0.25, dy: 0.5 }  
             ];
 
             for (let x = 0; x < N; x++) {
@@ -581,7 +659,6 @@
                         let cy = y + centers[i].dy;
                         let isReserved = false;
 
-                        // 判断当前小三角形中心是否在保留侧
                         if (axis === 'V') {
                             if (side === 'left' && cx < k) isReserved = true;
                             if (side === 'right' && cx > k) isReserved = true;
@@ -596,9 +673,8 @@
                             if (side === 'bottom-right' && cx + cy > k) isReserved = true;
                         }
 
-                        if (isReserved) continue; // 在保留侧，颜色不变
+                        if (isReserved) continue; 
 
-                        // 计算中心点关于折痕的对称点
                         let cx_src = cx;
                         let cy_src = cy;
                         if (axis === 'V') {
@@ -616,7 +692,6 @@
                         let x_src = Math.floor(cx_src);
                         let y_src = Math.floor(cy_src);
                         
-                        // 如果对称点落在盘面内，则取该点颜色；如果在盘面外，则保持原样
                         if (x_src >= 0 && x_src < N && y_src >= 0 && y_src < N) {
                             let fx = cx_src - x_src;
                             let fy = cy_src - y_src;
@@ -682,7 +757,7 @@
             updateHistoryButtons();
             updateProgress();
             checkVictory();
-            renderGame();
+            refreshBothBoards(); // 刷新两个盘面
         }
 
         function updateHistoryButtons() {
@@ -699,7 +774,7 @@
                 pendingAction = null; 
                 updateHistoryButtons();
                 updateProgress();
-                renderGame();
+                refreshBothBoards();
             }
         }
 
@@ -712,7 +787,7 @@
                 pendingAction = null; 
                 updateHistoryButtons();
                 updateProgress();
-                renderGame();
+                refreshBothBoards();
             }
         }
 
@@ -734,7 +809,8 @@
         }
 
         // --- 绘制逻辑 ---
-        function drawBoard(ctx, grid) {
+        // 支持传入 compareGrid 来实现仅显示匹配的颜色
+        function drawBoard(ctx, grid, compareGrid = null) {
             const width = ctx.canvas.width;
             const cellSize = width / N;
             ctx.clearRect(0, 0, width, width);
@@ -744,19 +820,27 @@
                     const px = x * cellSize, py = y * cellSize;
                     const cx = px + cellSize / 2, cy = py + cellSize / 2;
                     const colors = grid[x][y];
+                    const compColors = compareGrid ? compareGrid[x][y] : null;
+
+                    // 获取实际要填充的颜色 (如果不匹配且开启了比较，则用白色)
+                    const getColor = (idx) => {
+                        if (compColors && colors[idx] !== compColors[idx]) return '#ffffff'; // 置白
+                        return colors[idx];
+                    };
 
                     ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + cellSize, py); ctx.lineTo(cx, cy); ctx.closePath();
-                    ctx.fillStyle = colors[0]; ctx.fill();
+                    ctx.fillStyle = getColor(0); ctx.fill();
                     
                     ctx.beginPath(); ctx.moveTo(px + cellSize, py); ctx.lineTo(px + cellSize, py + cellSize); ctx.lineTo(cx, cy); ctx.closePath();
-                    ctx.fillStyle = colors[1]; ctx.fill();
+                    ctx.fillStyle = getColor(1); ctx.fill();
                     
                     ctx.beginPath(); ctx.moveTo(px + cellSize, py + cellSize); ctx.lineTo(px, py + cellSize); ctx.lineTo(cx, cy); ctx.closePath();
-                    ctx.fillStyle = colors[2]; ctx.fill();
+                    ctx.fillStyle = getColor(2); ctx.fill();
                     
                     ctx.beginPath(); ctx.moveTo(px, py + cellSize); ctx.lineTo(px, py); ctx.lineTo(cx, cy); ctx.closePath();
-                    ctx.fillStyle = colors[3]; ctx.fill();
+                    ctx.fillStyle = getColor(3); ctx.fill();
 
+                    // 画线
                     ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
                     ctx.lineWidth = 1;
                     ctx.beginPath();
@@ -771,51 +855,53 @@
         }
 
         function getFoldRegionPath(action) {
-            const width = gameCanvas.width;
-            const cellSize = width / N;
+            const W = gameCanvas.width;
+            const cellSize = W / N;
             const { axis, k, side } = action;
             let path = [];
+            let c = k * cellSize;
 
             if (axis === 'V') {
-                let x = k * cellSize;
-                if (side === 'left') path = [{x:0, y:0}, {x:x, y:0}, {x:x, y:width}, {x:0, y:width}];
-                else path = [{x:x, y:0}, {x:width, y:0}, {x:width, y:width}, {x:x, y:width}];
+                if (side === 'left') path = [{x:0, y:0}, {x:c, y:0}, {x:c, y:W}, {x:0, y:W}];
+                else path = [{x:c, y:0}, {x:W, y:0}, {x:W, y:W}, {x:c, y:W}];
             } else if (axis === 'H') {
-                let y = k * cellSize;
-                if (side === 'top') path = [{x:0, y:0}, {x:width, y:0}, {x:width, y:y}, {x:0, y:y}];
-                else path = [{x:0, y:y}, {x:width, y:y}, {x:width, y:width}, {x:0, y:width}];
+                if (side === 'top') path = [{x:0, y:0}, {x:W, y:0}, {x:W, y:c}, {x:0, y:c}];
+                else path = [{x:0, y:c}, {x:W, y:c}, {x:W, y:W}, {x:0, y:W}];
             } else if (axis === 'M') {
-                let c = k * cellSize;
-                if (side === 'top-left') {
-                    let p1 = {x: 0, y: c};
-                    let p2 = {x: width - c, y: width};
-                    if (c < 0) { p1 = {x: -c, y: 0}; p2 = {x: width, y: width + c}; }
-                    path = [{x:0, y:0}, p2, p1];
-                } else {
-                    let p1 = {x: 0, y: c};
-                    let p2 = {x: width - c, y: width};
-                    if (c < 0) { p1 = {x: -c, y: 0}; p2 = {x: width, y: width + c}; }
-                    path = [{x:width, y:width}, p1, p2];
+                if (side === 'top-left') { 
+                    if (c >= 0) {
+                        path = [{x:0, y:0}, {x:0, y:c}, {x:W-c, y:W}, {x:0, y:W}];
+                    } else {
+                        path = [{x:0, y:0}, {x:-c, y:0}, {x:W, y:W+c}, {x:0, y:W}];
+                    }
+                } else { 
+                    if (c >= 0) {
+                        path = [{x:0, y:c}, {x:W-c, y:W}, {x:W, y:W}, {x:W, y:0}, {x:0, y:0}];
+                    } else {
+                        path = [{x:-c, y:0}, {x:W, y:W+c}, {x:W, y:W}, {x:0, y:W}, {x:0, y:0}];
+                    }
                 }
             } else if (axis === 'A') {
-                let c = k * cellSize;
-                if (side === 'top-left') {
-                    let p1 = {x: 0, y: c};
-                    let p2 = {x: c, y: 0};
-                    if (c > width) { p1 = {x:c-width, y:width}; p2 = {x:width, y:c-width}; }
-                    path = [{x:0, y:0}, p2, p1];
-                } else {
-                    let p1 = {x: 0, y: c};
-                    let p2 = {x: c, y: 0};
-                    if (c > width) { p1 = {x:c-width, y:width}; p2 = {x:width, y:c-width}; }
-                    path = [{x:width, y:width}, p1, p2];
+                if (side === 'top-left') { 
+                    if (c <= W) {
+                        path = [{x:0, y:0}, {x:c, y:0}, {x:0, y:c}];
+                    } else {
+                        path = [{x:0, y:0}, {x:W, y:0}, {x:W, y:c-W}, {x:c-W, y:W}, {x:0, y:W}];
+                    }
+                } else { 
+                    if (c <= W) {
+                        path = [{x:c, y:0}, {x:W, y:0}, {x:W, y:W}, {x:0, y:W}, {x:0, y:c}];
+                    } else {
+                        path = [{x:W, y:c-W}, {x:W, y:W}, {x:c-W, y:W}];
+                    }
                 }
             }
             return path;
         }
 
         function renderGame(animProgress = 0) {
-            drawBoard(ctx, currentGrid);
+            // 传入 targetGrid 作为比较基准
+            drawBoard(ctx, currentGrid, showOnlyMatched ? targetGrid : null);
             
             const currentAction = isAnimating ? animationState.action : (isDragging ? dragAction : pendingAction);
             
@@ -835,10 +921,12 @@
                 }
 
                 ctx.save();
-                ctx.strokeStyle = '#FF4500';
-                ctx.lineWidth = isAnimating ? (6 + Math.sin(animProgress * Math.PI) * 4) : 4;
-                ctx.setLineDash([10, 8]);
-                if (isAnimating || pendingAction) { ctx.shadowBlur = 15; ctx.shadowColor = '#FF4500'; }
+                ctx.strokeStyle = '#FF4500'; 
+                ctx.lineWidth = isAnimating ? (6 + Math.sin(animProgress * Math.PI) * 4) : 5;
+                if (isAnimating || pendingAction) { 
+                    ctx.shadowBlur = 20; 
+                    ctx.shadowColor = '#FF4500'; 
+                }
                 
                 ctx.beginPath();
                 if (path.length > 0) {
@@ -906,7 +994,7 @@
                     if (animationState.onComplete) {
                         animationState.onComplete();
                     }
-                    renderGame();
+                    // 动画完成后的最终渲染会由 pushState 中的 refreshBothBoards 接管
                 }
             }
             requestAnimationFrame(animate);
@@ -957,10 +1045,12 @@
                 return { axis: 'H', k: k, side: side };
             } else if (axis === 'M') {
                 let k = Math.round((endY - endX) / cellSize);
+                if (k <= -N || k >= N) return null; 
                 let side = (startY - startX) < k * cellSize ? 'top-left' : 'bottom-right';
                 return { axis: 'M', k: k, side: side };
             } else if (axis === 'A') {
                 let k = Math.round((endY + endX) / cellSize);
+                if (k <= 0 || k >= 2 * N) return null; 
                 let side = (startX + startY) < k * cellSize ? 'top-left' : 'bottom-right';
                 return { axis: 'A', k: k, side: side };
             }
@@ -986,7 +1076,7 @@
             
             const dist = Math.hypot(currentPos.x - startPos.x, currentPos.y - startPos.y);
             
-            if (dist > 15) {
+            if (dist > 25) { 
                 hasDragged = true;
                 pendingAction = null; 
                 dragAction = getDragAction(startPos.x, startPos.y, currentPos.x, currentPos.y);
@@ -1004,8 +1094,7 @@
             if (hasDragged && dragAction) {
                 pendingAction = dragAction;
                 renderGame();
-            } else if (dist < 15) {
-                // 触发点击/双击判定
+            } else if (dist < 25) {
                 const now = Date.now();
                 if (now - lastTap < 300) {
                     if (pendingAction) {
@@ -1019,7 +1108,6 @@
             dragAction = null;
         }
 
-        // 原生双击事件作为双重保险
         gameCanvas.addEventListener('dblclick', (e) => {
             e.preventDefault();
             if (isVictory || isHintMode || isAnimating) return;
@@ -1067,7 +1155,7 @@
                 
                 updateHistoryButtons();
                 updateProgress();
-                renderGame();
+                refreshBothBoards(); // 刷新
             } else {
                 hintBtn.classList.remove('active');
                 overlay.classList.remove('show');
@@ -1146,8 +1234,7 @@
             document.getElementById('fold-count').innerText = 0;
             updateHistoryButtons();
             updateProgress(); 
-            renderGame();
-            drawBoard(tCtx, targetGrid);
+            refreshBothBoards(); // 初始化刷新
             startTimer();
         }
 
@@ -1173,7 +1260,7 @@
             
             updateHistoryButtons();
             updateProgress();
-            renderGame();
+            refreshBothBoards(); // 刷新
             startTimer();
         }
 
