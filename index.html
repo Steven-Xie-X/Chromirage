@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>缤纷叠影 - 完全版</title>
+    <title>缤纷叠影 - 完全修复版</title>
     <style>
         :root {
             --bg-color: #1a1c2c;
@@ -76,7 +76,6 @@
             transform: scale(0.9);
         }
 
-        /* 灯泡激活状态 */
         #hint-btn.active {
             background: rgba(255, 215, 0, 0.2);
             border-color: #FFD700;
@@ -84,7 +83,6 @@
             box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
         }
         
-        /* 问号按钮 */
         #help-btn {
             color: #5bc0de;
             border-color: rgba(91, 192, 222, 0.4);
@@ -127,7 +125,6 @@
             position: relative;
         }
 
-        /* 盘面上方的工具栏 */
         .board-header {
             width: 100%;
             display: flex;
@@ -207,7 +204,6 @@
             margin-top: 20px;
         }
 
-        /* --- 底部按钮 --- */
         .controls {
             display: flex;
             gap: 15px;
@@ -295,26 +291,21 @@
 
     <div class="overlay" id="overlay"></div>
 
-    <!-- 顶部栏 -->
     <div class="top-bar">
         <div class="icon-btn" id="help-btn" title="查看规则">❓</div>
         <div class="game-title">缤纷叠影</div>
         <div class="icon-btn" id="hint-btn" title="进入/退出演示模式">💡</div>
     </div>
     
-    <!-- 倒计时 -->
     <div class="timer-display">剩余时间: <span id="timer">--:--</span></div>
 
-    <!-- 状态栏 -->
     <div class="status-bar">
         <span>🔄 折叠: <span id="fold-count">0</span> / <span id="target-folds">4</span>次</span>
         <span>🎯 状态: <span id="status-text" style="color:#5bc0de;">进行中</span></span>
     </div>
 
-    <!-- 游戏区域 -->
     <div class="game-container">
         
-        <!-- 盘面上方操作栏 -->
         <div class="board-header">
             <div class="history-controls">
                 <button class="small-icon-btn" id="undo-btn" title="撤回" disabled>↩️</button>
@@ -337,7 +328,6 @@
             <button class="small-btn" id="cheat-btn">✨ 随机折叠</button>
         </div>
 
-        <!-- 胜利弹窗 -->
         <div class="modal" id="victory-popup">
             <h2>🎉 挑战成功！</h2>
             <div>
@@ -346,7 +336,6 @@
             </div>
         </div>
         
-        <!-- 规则弹窗 -->
         <div class="modal" id="rules-popup">
             <h2>📜 游戏规则</h2>
             <p>
@@ -363,7 +352,6 @@
     </div>
 
     <script>
-        // 游戏配置
         const N = 8;
         const COLORS = [
             '#FF8C00', '#8A2BE2', '#DC143C', '#FFD700', 
@@ -374,7 +362,6 @@
         let targetGrid = [];
         let currentGrid = [];
         
-        // 历史记录机制
         let stateHistory = []; 
         let currentStateIndex = -1;
         
@@ -382,19 +369,15 @@
         let targetFoldCount = 4;
         let isVictory = false;
         
-        // 演示模式相关
         let isHintMode = false;
         let solutionSteps = []; 
-        let demoStepIndex = 0;
         let isAnimating = false;
         
-        // 拖拽状态
         let isDragging = false;
         let startPos = { x: 0, y: 0 };
         let currentPos = { x: 0, y: 0 };
         let dragAction = null;
 
-        // DOM 元素
         const gameCanvas = document.getElementById('game-canvas');
         const ctx = gameCanvas.getContext('2d');
         const targetCanvas = document.getElementById('target-canvas');
@@ -558,13 +541,15 @@
             return tempGrid;
         }
 
-        // --- 历史记录管理 ---
+        // --- 历史记录管理 (已修复Bug) ---
         function pushState(newGrid) {
-            // 如果当前不是最新状态，截断后面的记录
             if (currentStateIndex < stateHistory.length - 1) {
                 stateHistory = stateHistory.slice(0, currentStateIndex + 1);
             }
-            stateHistory.push(deepCopyGrid(newGrid));
+            
+            // 【修复点】：必须将新网格赋给 currentGrid，否则 renderGame 画出来还是旧的
+            currentGrid = deepCopyGrid(newGrid); 
+            stateHistory.push(currentGrid);
             currentStateIndex = stateHistory.length - 1;
             
             foldCount = currentStateIndex;
@@ -776,7 +761,7 @@
             
             if (dragAction) {
                 const nextGrid = applyFold(currentGrid, dragAction);
-                pushState(nextGrid);
+                pushState(nextGrid); // 修复后这里能正确刷新并记录状态了
             } else {
                 renderGame();
             }
@@ -803,10 +788,9 @@
                 overlay.classList.add('show');
                 showToast("进入演示模式 (单击下一步, 双击上一步)");
                 
-                // 演示模式强制从初始状态开始
                 currentStateIndex = 0;
                 currentGrid = deepCopyGrid(startGrid);
-                stateHistory = [deepCopyGrid(startGrid)]; // 重置历史记录
+                stateHistory = [deepCopyGrid(startGrid)];
                 foldCount = 0;
                 document.getElementById('fold-count').innerText = 0;
                 
@@ -826,7 +810,7 @@
             if (clickTimer !== null) {
                 clearTimeout(clickTimer);
                 clickTimer = null;
-                goUndo(); // 双击相当于撤回
+                goUndo(); // 双击撤回
             } else {
                 clickTimer = setTimeout(() => {
                     clickTimer = null;
@@ -850,7 +834,7 @@
 
             setTimeout(() => {
                 const nextGrid = applyFold(currentGrid, action);
-                pushState(nextGrid);
+                pushState(nextGrid); // 修复后这里也会正确刷新了
                 isAnimating = false;
                 showToast(`演示第 ${currentStateIndex} / ${solutionSteps.length} 步`);
             }, 1000);
@@ -882,7 +866,6 @@
                 return initGame();
             }
             
-            // 初始化历史记录
             stateHistory = [deepCopyGrid(startGrid)];
             currentStateIndex = 0;
             currentGrid = deepCopyGrid(startGrid);
@@ -902,7 +885,7 @@
                 document.getElementById('status-text').style.color = '#32CD32';
                 document.getElementById('victory-popup').classList.add('show');
                 stopTimer();
-                updateHistoryButtons(); // 禁用撤回/前进
+                updateHistoryButtons();
                 
                 if (isHintMode) {
                     hintBtn.classList.remove('active');
@@ -918,7 +901,6 @@
                 isVictory = false; 
                 document.getElementById('status-text').innerText = '复盘模式';
                 document.getElementById('status-text').style.color = '#FFD700';
-                // 复盘模式下允许撤回和前进
                 updateHistoryButtons();
             } else {
                 initGame();
@@ -935,7 +917,6 @@
             setTimeout(() => { toastEl.classList.remove('show'); }, 2000);
         }
 
-        // 事件绑定
         undoBtn.addEventListener('click', goUndo);
         redoBtn.addEventListener('click', goRedo);
         restartBtn.addEventListener('click', initGame);
@@ -953,10 +934,9 @@
             if (axis === 'A') action = { axis, k: Math.floor(Math.random()*(2*N-1))+1, side: Math.random()>0.5?'bottom-left':'top-right' };
             
             const nextGrid = applyFold(currentGrid, action);
-            pushState(nextGrid);
+            pushState(nextGrid); // 修复后这里也正常了
         });
 
-        // --- 计时器 ---
         let timeLeft = 300;
         let timerInterval;
 
@@ -989,7 +969,6 @@
             document.getElementById('timer').innerText = `${m}:${s}`;
         }
 
-        // 启动游戏
         initGame();
     </script>
 </body>
