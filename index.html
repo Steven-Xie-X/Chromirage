@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>缤纷叠影 - 完美修复版</title>
+    <title>缤纷叠影 - 自定义版</title>
     <style>
         :root {
             --bg-color: #1a1c2c;
@@ -45,6 +45,11 @@
             padding: 0 10px;
         }
 
+        .top-left-group {
+            display: flex;
+            gap: 10px;
+        }
+
         .game-title {
             font-size: 28px;
             font-weight: bold;
@@ -83,6 +88,11 @@
         #help-btn {
             color: #5bc0de;
             border-color: rgba(91, 192, 222, 0.4);
+        }
+
+        #settings-btn {
+            color: #a18cd1;
+            border-color: rgba(161, 140, 209, 0.4);
         }
 
         .timer-display {
@@ -342,12 +352,14 @@
         .modal h2 { color: var(--primary-color); font-size: 20px; margin-bottom: 5px; }
         .modal p { font-size: 14px; color: #ccc; line-height: 1.6; text-align: left; margin-bottom: 10px;}
         
-        .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+        .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; text-align: left; }
+        .input-group label { font-size: 13px; color: #aaa; }
         .input-group input {
             padding: 10px; border-radius: 8px; border: 1px solid #555;
-            background: #1a1c2c; color: #fff; font-size: 16px; text-align: center;
+            background: #1a1c2c; color: #fff; font-size: 16px;
+            outline: none;
         }
-        .input-group input:focus { outline: none; border-color: var(--primary-color); }
+        .input-group input:focus { border-color: var(--primary-color); }
 
         .toast {
             position: fixed; bottom: 20%; left: 50%;
@@ -366,7 +378,10 @@
     <div class="overlay" id="overlay"></div>
 
     <div class="top-bar">
-        <div class="icon-btn" id="help-btn" title="查看规则">❓</div>
+        <div class="top-left-group">
+            <div class="icon-btn" id="help-btn" title="查看规则">❓</div>
+            <div class="icon-btn" id="settings-btn" title="游戏设置">⚙️</div>
+        </div>
         <div class="game-title">缤纷叠影</div>
         <div class="icon-btn" id="hint-btn" title="进入/退出演示模式">💡</div>
     </div>
@@ -380,7 +395,7 @@
     </div>
 
     <div class="progress-container">
-        <div class="match-text">匹配: <span id="match-count">0</span>/256</div>
+        <div class="match-text">匹配: <span id="match-count">0</span>/<span id="total-count">256</span></div>
         <div class="progress-bar-wrapper">
             <div class="progress-fill" id="progress-fill"></div>
         </div>
@@ -457,6 +472,26 @@
             <button class="btn" onclick="closeRules()">我知道了</button>
         </div>
 
+        <div class="modal" id="settings-popup">
+            <h2>⚙️ 自定义设置</h2>
+            <div class="input-group">
+                <label>1️⃣ 颜色种类数目（2-8）</label>
+                <input type="number" id="setting-colors" min="2" max="8" value="8">
+            </div>
+            <div class="input-group">
+                <label>2️⃣ 盘面规格大小（4-12）</label>
+                <input type="number" id="setting-size" min="4" max="12" value="8">
+            </div>
+            <div class="input-group">
+                <label>3️⃣ 折叠次数（单数字如 5，或范围如 4-6）</label>
+                <input type="text" id="setting-folds" value="4-6">
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:10px;">
+                <button class="small-btn" onclick="closeSettings()">取消</button>
+                <button class="btn" onclick="applySettings()">应用设置</button>
+            </div>
+        </div>
+
         <div class="modal" id="custom-id-popup">
             <h2>🔢 指定题目编号</h2>
             <div class="input-group">
@@ -472,8 +507,11 @@
     </div>
 
     <script>
-        const N = 8;
-        const TOTAL_TRIANGLES = N * N * 4; // 256
+        // 全局配置参数
+        let N = 8; 
+        let colorCount = 8; 
+        let foldRangeText = "4-6";
+
         const COLORS = [
             '#FF8C00', '#8A2BE2', '#DC143C', '#FFD700', 
             '#87CEEB', '#00008B', '#FF69B4', '#32CD32'
@@ -525,11 +563,14 @@
         const undoBtn = document.getElementById('undo-btn');
         const redoBtn = document.getElementById('redo-btn');
         const helpBtn = document.getElementById('help-btn');
+        const settingsBtn = document.getElementById('settings-btn');
         const rulesPopup = document.getElementById('rules-popup');
+        const settingsPopup = document.getElementById('settings-popup');
         const customIdPopup = document.getElementById('custom-id-popup');
         const customIdInput = document.getElementById('custom-id-input');
 
         const matchCountEl = document.getElementById('match-count');
+        const totalCountEl = document.getElementById('total-count');
         const progressFillEl = document.getElementById('progress-fill');
         const progressTextEl = document.getElementById('progress-text');
 
@@ -546,9 +587,7 @@
         });
 
         function refreshBothBoards() {
-            // 当前盘面：受开关影响
             drawBoard(ctx, currentGrid, showOnlyMatched ? targetGrid : null);
-            // 目标盘面：强制传入 null，永远显示全彩
             drawBoard(tCtx, targetGrid, null);
             renderGame(); 
         }
@@ -579,15 +618,16 @@
         }
 
         function createRandomGrid(rng) {
+            const activeColors = COLORS.slice(0, colorCount);
             const grid = [];
             for (let x = 0; x < N; x++) {
                 grid[x] = [];
                 for (let y = 0; y < N; y++) {
                     grid[x][y] = [
-                        COLORS[Math.floor(rng() * COLORS.length)],
-                        COLORS[Math.floor(rng() * COLORS.length)],
-                        COLORS[Math.floor(rng() * COLORS.length)],
-                        COLORS[Math.floor(rng() * COLORS.length)]
+                        activeColors[Math.floor(rng() * activeColors.length)],
+                        activeColors[Math.floor(rng() * activeColors.length)],
+                        activeColors[Math.floor(rng() * activeColors.length)],
+                        activeColors[Math.floor(rng() * activeColors.length)]
                     ];
                 }
             }
@@ -692,11 +732,28 @@
             return newGrid;
         }
 
-        function generateTargetGrid(rng, grid, folds) {
+        function getRandomFolds(rng) {
+            if (foldRangeText.includes('-')) {
+                let parts = foldRangeText.split('-');
+                let min = parseInt(parts[0]);
+                let max = parseInt(parts[1]);
+                if (isNaN(min) || isNaN(max)) min = 4, max = 6;
+                if (min > max) { let temp = min; min = max; max = temp; }
+                return Math.floor(rng() * (max - min + 1)) + min;
+            } else {
+                let val = parseInt(foldRangeText);
+                return isNaN(val) ? 4 : val;
+            }
+        }
+
+        function generateTargetGrid(rng, grid) {
             let tempGrid = deepCopyGrid(grid);
             solutionSteps = [];
             
-            while (solutionSteps.length < folds) {
+            targetFoldCount = getRandomFolds(rng);
+            if (targetFoldCount < 1) targetFoldCount = 1;
+
+            while (solutionSteps.length < targetFoldCount) {
                 let found = false;
                 for (let attempt = 0; attempt < 50; attempt++) {
                     const axes = ['V', 'H', 'M', 'A'];
@@ -725,7 +782,12 @@
                         break; 
                     }
                 }
-                if (!found) solutionSteps.push({ axis: 'V', k: 4, side: 'left' }); 
+                // 防止死循环，若实在找不到则强制加一步垂直
+                if (!found) {
+                    let action = { axis: 'V', k: Math.floor(N/2), side: 'left' };
+                    tempGrid = applyFold(tempGrid, action);
+                    solutionSteps.push(action);
+                }
             }
             return tempGrid;
         }
@@ -779,8 +841,10 @@
         }
 
         function updateProgress() {
+            const totalTris = N * N * 4;
+            totalCountEl.innerText = totalTris;
             const matchCount = calculateMatch(currentGrid, targetGrid);
-            const percent = Math.floor((matchCount / TOTAL_TRIANGLES) * 100);
+            const percent = Math.floor((matchCount / totalTris) * 100);
             
             matchCountEl.innerText = matchCount;
             progressFillEl.style.width = `${percent}%`;
@@ -795,7 +859,6 @@
             }
         }
 
-        // --- 绘制逻辑 ---
         function drawBoard(ctx, grid, compareGrid = null) {
             const width = ctx.canvas.width;
             const cellSize = width / N;
@@ -838,7 +901,6 @@
             }
         }
 
-        // 【终极修复】使用纯几何交点法，绝对不会画出错误折线
         function getFoldRegionPath(action) {
             const W = gameCanvas.width;
             const cellSize = W / N;
@@ -847,7 +909,7 @@
             const points = [];
 
             const isReserved = (x, y) => {
-                const eps = 0.1; // 容差
+                const eps = 0.1; 
                 if (axis === 'V') {
                     if (side === 'left' && x < c - eps) return true;
                     if (side === 'right' && x > c + eps) return true;
@@ -864,13 +926,11 @@
                 return false;
             };
 
-            // 1. 判断并加入四个边界角点
             const corners = [{x:0,y:0}, {x:W,y:0}, {x:W,y:W}, {x:0,y:W}];
             corners.forEach(p => {
                 if (isReserved(p.x, p.y)) points.push(p);
             });
 
-            // 2. 计算折痕与边界的交点
             let intersections = [];
             if (axis === 'V') {
                 intersections.push({x:c, y:0}, {x:c, y:W});
@@ -890,7 +950,6 @@
                 }
             });
 
-            // 3. 去重，防止顶点重合导致渲染错误
             const uniquePoints = [];
             points.forEach(p => {
                 let isDup = false;
@@ -904,7 +963,6 @@
 
             if (uniquePoints.length < 3) return [];
 
-            // 4. 顺时针排序 (质心法)
             let cx = 0, cy = 0;
             uniquePoints.forEach(p => { cx += p.x; cy += p.y; });
             cx /= uniquePoints.length;
@@ -1225,17 +1283,13 @@
             overlay.classList.remove('show');
             document.getElementById('victory-popup').classList.remove('show');
             rulesPopup.classList.remove('show');
+            settingsPopup.classList.remove('show');
             customIdPopup.classList.remove('show');
 
             const rng = mulberry32(levelId);
 
-            targetFoldCount = Math.floor(rng() * 3) + 4;
-            document.getElementById('target-folds').innerText = targetFoldCount;
-            document.getElementById('status-text').innerText = '进行中';
-            document.getElementById('status-text').style.color = '#5bc0de';
-
             startGrid = createRandomGrid(rng);
-            targetGrid = generateTargetGrid(rng, startGrid, targetFoldCount);
+            targetGrid = generateTargetGrid(rng, startGrid);
             
             if (isGridEqual(startGrid, targetGrid)) {
                 return loadLevel(levelId + 1 > 100000 ? 1 : levelId + 1);
@@ -1246,6 +1300,10 @@
             currentGrid = deepCopyGrid(startGrid);
             
             document.getElementById('fold-count').innerText = 0;
+            document.getElementById('target-folds').innerText = solutionSteps.length;
+            document.getElementById('status-text').innerText = '进行中';
+            document.getElementById('status-text').style.color = '#5bc0de';
+
             updateHistoryButtons();
             updateProgress(); 
             refreshBothBoards(); 
@@ -1311,6 +1369,44 @@
 
         function closeRules() { rulesPopup.classList.remove('show'); }
 
+        function openSettings() {
+            if (isAnimating) return;
+            document.getElementById('setting-colors').value = colorCount;
+            document.getElementById('setting-size').value = N;
+            document.getElementById('setting-folds').value = foldRangeText;
+            settingsPopup.classList.add('show');
+        }
+
+        function closeSettings() { settingsPopup.classList.remove('show'); }
+
+        function applySettings() {
+            let newColors = parseInt(document.getElementById('setting-colors').value);
+            let newSize = parseInt(document.getElementById('setting-size').value);
+            let newFolds = document.getElementById('setting-folds').value.trim();
+
+            if (isNaN(newColors) || newColors < 2 || newColors > 8) {
+                showToast("颜色数量请在 2-8 之间");
+                return;
+            }
+            if (isNaN(newSize) || newSize < 4 || newSize > 12) {
+                showToast("盘面尺寸请在 4-12 之间");
+                return;
+            }
+            if (!/^\d+(-\d+)?$/.test(newFolds)) {
+                showToast("折叠次数格式错误，需为单数字或 a-b 格式");
+                return;
+            }
+
+            // 应用
+            colorCount = newColors;
+            N = newSize;
+            foldRangeText = newFolds;
+
+            closeSettings();
+            loadLevel(currentLevelId);
+            showToast("设置已应用，题目已重置");
+        }
+
         function openCustomPopup() {
             if (isAnimating) return;
             customIdInput.value = currentLevelId;
@@ -1340,6 +1436,7 @@
         undoBtn.addEventListener('click', goUndo);
         redoBtn.addEventListener('click', goRedo);
         helpBtn.addEventListener('click', () => rulesPopup.classList.add('show'));
+        settingsBtn.addEventListener('click', openSettings);
         
         document.getElementById('reset-btn').addEventListener('click', resetCurrentLevel);
         document.getElementById('new-btn').addEventListener('click', () => {
