@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>缤纷叠影 - 完美修复版</title>
+    <title>缤纷叠影 - 精确小三角形版</title>
     <style>
         :root {
             --bg-color: #1a1c2c;
@@ -34,7 +34,6 @@
             overflow-x: hidden;
         }
 
-        /* --- 顶部栏与标题 --- */
         .top-bar {
             width: 100%;
             max-width: 400px;
@@ -72,9 +71,7 @@
             transition: all 0.2s;
             z-index: 200;
         }
-        .icon-btn:active {
-            transform: scale(0.9);
-        }
+        .icon-btn:active { transform: scale(0.9); }
 
         #hint-btn.active {
             background: rgba(255, 215, 0, 0.2);
@@ -91,14 +88,21 @@
         .timer-display {
             font-size: 14px;
             color: #ccc;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             background: rgba(0, 0, 0, 0.3);
             padding: 4px 16px;
             border-radius: 20px;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        /* --- 状态栏 --- */
+        .level-display {
+            font-size: 14px;
+            color: #a18cd1;
+            margin-bottom: 10px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
         .status-bar {
             width: 100%;
             max-width: 400px;
@@ -109,13 +113,8 @@
             font-size: 14px;
             color: #ccc;
         }
-        .status-bar span {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
+        .status-bar span { display: flex; align-items: center; gap: 5px; }
 
-        /* --- 进度条 --- */
         .progress-container {
             width: 100%;
             max-width: 400px;
@@ -126,13 +125,7 @@
             padding: 0 10px;
         }
 
-        .match-text {
-            font-size: 13px;
-            color: #aaa;
-            white-space: nowrap;
-            width: 95px;
-        }
-
+        .match-text { font-size: 13px; color: #aaa; white-space: nowrap; width: 95px; }
         .progress-bar-wrapper {
             flex-grow: 1;
             height: 12px;
@@ -142,7 +135,6 @@
             position: relative;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-
         .progress-fill {
             height: 100%;
             width: 0%;
@@ -150,15 +142,8 @@
             border-radius: 6px;
             transition: width 0.3s ease-out, background 0.3s;
         }
+        .progress-text { font-size: 13px; color: #ccc; width: 45px; text-align: right; }
 
-        .progress-text {
-            font-size: 13px;
-            color: #ccc;
-            width: 45px;
-            text-align: right;
-        }
-
-        /* --- 游戏主区域 --- */
         .game-container {
             display: flex;
             flex-direction: column;
@@ -177,40 +162,51 @@
             margin-bottom: 5px;
         }
 
-        .history-controls {
+        .header-left {
             display: flex;
-            gap: 10px;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .history-controls, .axis-controls {
+            display: flex;
+            gap: 5px;
+            background: rgba(0,0,0,0.2);
+            padding: 3px;
+            border-radius: 10px;
         }
 
         .small-icon-btn {
-            width: 32px;
-            height: 32px;
+            width: 30px; height: 30px; border-radius: 8px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #aaa; font-size: 16px;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .small-icon-btn:not(:disabled):hover { background: rgba(255, 255, 255, 0.1); }
+        .small-icon-btn:not(:disabled):active { background: rgba(255, 255, 255, 0.2); }
+        .small-icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .axis-btn {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ccc;
+            width: 30px; height: 30px;
             border-radius: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            font-size: 16px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            display: flex; justify-content: center; align-items: center;
             cursor: pointer;
             transition: all 0.2s;
+            background: transparent;
         }
-        .small-icon-btn:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-        .small-icon-btn:not(:disabled):active {
-            background: rgba(255, 255, 255, 0.2);
+        .axis-btn.active {
+            background: rgba(91, 192, 222, 0.2);
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 8px rgba(91, 192, 222, 0.4);
         }
 
-        .board-label {
-            font-size: 13px;
-            color: #aaa;
-            flex-grow: 1;
-            text-align: right;
-            padding-right: 5px;
-        }
+        .board-label { font-size: 13px; color: #aaa; }
 
         .board-wrapper {
             position: relative;
@@ -230,102 +226,91 @@
         }
 
         canvas {
-            width: 100%;
-            height: 100%;
-            border-radius: 6px;
-            display: block;
+            width: 100%; height: 100%;
+            border-radius: 6px; display: block;
             cursor: grab;
         }
-        canvas:active {
-            cursor: grabbing;
-        }
+        canvas:active { cursor: grabbing; }
 
         .target-wrapper {
-            width: 55%;
-            aspect-ratio: 1 / 1;
-            position: relative;
-            margin-top: 20px;
+            width: 55%; aspect-ratio: 1 / 1;
+            position: relative; margin-top: 20px;
         }
 
         .controls {
             display: flex;
-            gap: 15px;
+            gap: 10px;
             margin-top: 15px;
             align-items: center;
+            width: 100%;
+            justify-content: center;
         }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            flex: 1;
+            max-width: 100px;
+        }
+        .action-btn:active { background: rgba(255, 255, 255, 0.2); }
+        .action-btn .icon { font-size: 18px; }
 
         .btn {
             background: linear-gradient(90deg, #a18cd1 0%, #fbc2eb 100%);
-            border: none;
-            color: #333;
-            padding: 10px 25px;
-            font-size: 15px;
-            font-weight: bold;
-            border-radius: 20px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(161, 140, 209, 0.4);
+            border: none; color: #333; padding: 10px 20px;
+            font-size: 15px; font-weight: bold; border-radius: 20px;
+            cursor: pointer; box-shadow: 0 4px 15px rgba(161, 140, 209, 0.4);
             transition: transform 0.1s;
         }
         .btn:active { transform: scale(0.95); }
 
-        .small-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            padding: 8px 16px;
-            border-radius: 15px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .small-btn:active { background: rgba(255, 255, 255, 0.2); }
-
-        /* --- 遮罩与弹窗 --- */
         .overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            z-index: 150;
-            display: none;
-            cursor: pointer;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 150; display: none; cursor: pointer;
         }
         .overlay.show { display: block; }
 
         .modal {
-            position: fixed;
-            top: 50%; left: 50%;
+            position: fixed; top: 50%; left: 50%;
             transform: translate(-50%, -50%) scale(0);
             background: rgba(20, 22, 37, 0.95);
-            padding: 25px 30px;
-            border-radius: 16px;
-            text-align: center;
-            z-index: 300;
+            padding: 25px 30px; border-radius: 16px;
+            text-align: center; z-index: 300;
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             border: 2px solid var(--primary-color);
             box-shadow: 0 0 50px rgba(91, 192, 222, 0.4);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            max-width: 90%;
-            width: 320px;
+            display: flex; flex-direction: column; gap: 15px;
+            max-width: 90%; width: 320px;
         }
         .modal.show { transform: translate(-50%, -50%) scale(1); }
         .modal h2 { color: var(--primary-color); font-size: 20px; margin-bottom: 5px; }
-        .modal p { font-size: 14px; color: #ccc; line-height: 1.5; text-align: left; margin-bottom: 10px;}
+        .modal p { font-size: 14px; color: #ccc; line-height: 1.6; text-align: left; margin-bottom: 10px;}
         
+        .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+        .input-group input {
+            padding: 10px; border-radius: 8px; border: 1px solid #555;
+            background: #1a1c2c; color: #fff; font-size: 16px; text-align: center;
+        }
+        .input-group input:focus { outline: none; border-color: var(--primary-color); }
+
         .toast {
-            position: fixed;
-            bottom: 20%;
-            left: 50%;
+            position: fixed; bottom: 20%; left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: #fff;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            z-index: 1000;
+            background: rgba(0, 0, 0, 0.85); color: #fff;
+            padding: 10px 20px; border-radius: 20px;
+            font-size: 14px; opacity: 0; transition: opacity 0.3s;
+            pointer-events: none; z-index: 1000;
+            white-space: nowrap;
         }
         .toast.show { opacity: 1; }
     </style>
@@ -341,6 +326,7 @@
     </div>
     
     <div class="timer-display">剩余时间: <span id="timer">--:--</span></div>
+    <div class="level-display">当前题目编号: <span id="level-id">1</span></div>
 
     <div class="status-bar">
         <span>🔄 折叠: <span id="fold-count">0</span> / <span id="target-folds">4</span>次</span>
@@ -358,9 +344,17 @@
     <div class="game-container">
         
         <div class="board-header">
-            <div class="history-controls">
-                <button class="small-icon-btn" id="undo-btn" title="撤回" disabled>↩️</button>
-                <button class="small-icon-btn" id="redo-btn" title="前进" disabled>↪️</button>
+            <div class="header-left">
+                <div class="history-controls">
+                    <button class="small-icon-btn" id="undo-btn" title="撤回" disabled>↩️</button>
+                    <button class="small-icon-btn" id="redo-btn" title="前进" disabled>↪️</button>
+                </div>
+                <div class="axis-controls">
+                    <div class="axis-btn" id="axis-h" title="锁定横折痕（上下折叠）">—</div>
+                    <div class="axis-btn" id="axis-v" title="锁定竖折痕（左右折叠）">|</div>
+                    <div class="axis-btn" id="axis-m" title="锁定主对角折痕（\）">\</div>
+                    <div class="axis-btn" id="axis-a" title="锁定副对角折痕（/）">/</div>
+                </div>
             </div>
             <div class="board-label">当前盘面</div>
         </div>
@@ -375,8 +369,18 @@
         </div>
 
         <div class="controls">
-            <button class="small-btn" id="restart-btn">🔄 重新开始</button>
-            <button class="small-btn" id="cheat-btn">✨ 随机折叠</button>
+            <button class="action-btn" id="reset-btn">
+                <span class="icon">1️⃣</span>
+                <span>重置盘面</span>
+            </button>
+            <button class="action-btn" id="new-btn">
+                <span class="icon">2️⃣</span>
+                <span>新的开始</span>
+            </button>
+            <button class="action-btn" id="custom-btn">
+                <span class="icon">3️⃣</span>
+                <span>指定编号</span>
+            </button>
         </div>
 
         <div class="modal" id="victory-popup">
@@ -390,13 +394,23 @@
         <div class="modal" id="rules-popup">
             <h2>📜 游戏规则</h2>
             <p>
-                1. 沿着网格上的任意直线（横向、纵向、主对角、副对角）拖动盘面即可进行折叠。<br>
-                2. 拖动时会显示白色虚线折痕，松手后，将一侧沿折痕覆盖到另一侧。<br>
-                3. 目标是将当前的彩色盘面折叠成下方“目标图形”的样子。<br>
-                4. 点击右上角 💡 可以进入演示模式，全屏点击可以查看答案步骤。<br>
-                5. 点击左上角 ❓ 随时查看此规则。
+                1. <b>拖动盘面</b>：决定折痕位置，程序会根据您的起点自动判断保留哪一侧，并用<b>红色高亮</b>框出。<br>
+                2. <b>锁定方向</b>：点击撤回键右侧的图标，可锁定特定方向的折痕。<br>
+                3. <b>双击确认</b>：选定折痕后，必须在盘面上快速<b>双击</b>，才会真正执行翻折动画。<br>
+                4. <b>目标</b>：将彩色盘面折叠成下方“目标图形”。
             </p>
             <button class="btn" onclick="closeRules()">我知道了</button>
+        </div>
+
+        <div class="modal" id="custom-id-popup">
+            <h2>🔢 指定题目编号</h2>
+            <div class="input-group">
+                <input type="number" id="custom-id-input" min="1" max="100000" placeholder="输入 1 - 100000" value="1">
+            </div>
+            <div>
+                <button class="small-btn" onclick="closeCustomPopup()">取消</button>
+                <button class="btn" style="margin-left: 10px;" onclick="confirmCustomId()">开始挑战</button>
+            </div>
         </div>
 
         <div class="toast" id="toast"></div>
@@ -423,12 +437,26 @@
         
         let isHintMode = false;
         let solutionSteps = []; 
-        let isAnimating = false;
         
+        // 交互与动画状态
         let isDragging = false;
+        let hasDragged = false;
         let startPos = { x: 0, y: 0 };
         let currentPos = { x: 0, y: 0 };
-        let dragAction = null;
+        let dragAction = null;      
+        let pendingAction = null;   
+        let lastTap = 0;            
+        let lockedAxis = null; 
+
+        let isAnimating = false;
+        let animationState = {
+            action: null,
+            startTime: 0,
+            duration: 500,
+            onComplete: null
+        };
+
+        let currentLevelId = 1;
 
         const gameCanvas = document.getElementById('game-canvas');
         const ctx = gameCanvas.getContext('2d');
@@ -440,26 +468,59 @@
         
         const undoBtn = document.getElementById('undo-btn');
         const redoBtn = document.getElementById('redo-btn');
-        const restartBtn = document.getElementById('restart-btn');
-        const cheatBtn = document.getElementById('cheat-btn');
         const helpBtn = document.getElementById('help-btn');
         const rulesPopup = document.getElementById('rules-popup');
+        const customIdPopup = document.getElementById('custom-id-popup');
+        const customIdInput = document.getElementById('custom-id-input');
 
         const matchCountEl = document.getElementById('match-count');
         const progressFillEl = document.getElementById('progress-fill');
         const progressTextEl = document.getElementById('progress-text');
 
+        const axisBtns = {
+            'H': document.getElementById('axis-h'),
+            'V': document.getElementById('axis-v'),
+            'M': document.getElementById('axis-m'),
+            'A': document.getElementById('axis-a')
+        };
+
+        function setLockedAxis(axis) {
+            if (lockedAxis === axis) {
+                lockedAxis = null; 
+            } else {
+                lockedAxis = axis;
+            }
+            for (let key in axisBtns) {
+                if (key === lockedAxis) axisBtns[key].classList.add('active');
+                else axisBtns[key].classList.remove('active');
+            }
+        }
+
+        for (let key in axisBtns) {
+            axisBtns[key].addEventListener('click', () => setLockedAxis(key));
+        }
+
+        // --- 伪随机数 ---
+        function mulberry32(a) {
+            return function() {
+                var t = a += 0x6D2B79F5;
+                t = Math.imul(t ^ t >>> 15, t | 1);
+                t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+        }
+
         // --- 核心算法 ---
-        function createRandomGrid() {
+        function createRandomGrid(rng) {
             const grid = [];
             for (let x = 0; x < N; x++) {
                 grid[x] = [];
                 for (let y = 0; y < N; y++) {
                     grid[x][y] = [
-                        COLORS[Math.floor(Math.random() * COLORS.length)],
-                        COLORS[Math.floor(Math.random() * COLORS.length)],
-                        COLORS[Math.floor(Math.random() * COLORS.length)],
-                        COLORS[Math.floor(Math.random() * COLORS.length)]
+                        COLORS[Math.floor(rng() * COLORS.length)],
+                        COLORS[Math.floor(rng() * COLORS.length)],
+                        COLORS[Math.floor(rng() * COLORS.length)],
+                        COLORS[Math.floor(rng() * COLORS.length)]
                     ];
                 }
             }
@@ -493,79 +554,74 @@
             return count;
         }
 
-        function mirrorColors(colors, axis) {
-            if (axis === 'V') return [colors[0], colors[3], colors[2], colors[1]];
-            if (axis === 'H') return [colors[2], colors[1], colors[0], colors[3]];
-            if (axis === 'M') return [colors[3], colors[2], colors[1], colors[0]];
-            if (axis === 'A') return [colors[1], colors[0], colors[3], colors[2]];
-            return colors;
-        }
-
+        // 【终极算法】精确到小三角形的对称折叠
         function applyFold(grid, action) {
             const newGrid = deepCopyGrid(grid);
             const { axis, k, side } = action;
 
-            if (axis === 'V') {
-                if (side === 'left') {
-                    for (let x = 0; x < k; x++) {
-                        let x2 = 2 * k - x - 1;
-                        if (x2 >= 0 && x2 < N) for (let y = 0; y < N; y++) newGrid[x2][y] = mirrorColors(grid[x][y], 'V');
-                    }
-                } else {
-                    for (let x = k; x < N; x++) {
-                        let x2 = 2 * k - x - 1;
-                        if (x2 >= 0 && x2 < N) for (let y = 0; y < N; y++) newGrid[x2][y] = mirrorColors(grid[x][y], 'V');
-                    }
-                }
-            } else if (axis === 'H') {
-                if (side === 'top') {
-                    for (let y = 0; y < k; y++) {
-                        let y2 = 2 * k - y - 1;
-                        if (y2 >= 0 && y2 < N) for (let x = 0; x < N; x++) newGrid[x][y2] = mirrorColors(grid[x][y], 'H');
-                    }
-                } else {
-                    for (let y = k; y < N; y++) {
-                        let y2 = 2 * k - y - 1;
-                        if (y2 >= 0 && y2 < N) for (let x = 0; x < N; x++) newGrid[x][y2] = mirrorColors(grid[x][y], 'H');
-                    }
-                }
-            } else if (axis === 'M') {
-                if (side === 'top-left') {
-                    for (let x = 0; x < N; x++) {
-                        for (let y = 0; y < N; y++) {
-                            if (y - x < k) {
-                                let x2 = y - k, y2 = x + k;
-                                if (x2 >= 0 && x2 < N && y2 >= 0 && y2 < N) newGrid[x2][y2] = mirrorColors(grid[x][y], 'M');
-                            }
+            function getTriangleIndex(fx, fy) {
+                if (Math.abs(fx - 0.5) < 0.01 && Math.abs(fy - 0.25) < 0.01) return 0; // 上
+                if (Math.abs(fx - 0.75) < 0.01 && Math.abs(fy - 0.5) < 0.01) return 1; // 右
+                if (Math.abs(fx - 0.5) < 0.01 && Math.abs(fy - 0.75) < 0.01) return 2; // 下
+                if (Math.abs(fx - 0.25) < 0.01 && Math.abs(fy - 0.5) < 0.01) return 3; // 左
+                return 0;
+            }
+
+            const centers = [
+                { dx: 0.5, dy: 0.25 }, // 上
+                { dx: 0.75, dy: 0.5 }, // 右
+                { dx: 0.5, dy: 0.75 }, // 下
+                { dx: 0.25, dy: 0.5 }  // 左
+            ];
+
+            for (let x = 0; x < N; x++) {
+                for (let y = 0; y < N; y++) {
+                    for (let i = 0; i < 4; i++) {
+                        let cx = x + centers[i].dx;
+                        let cy = y + centers[i].dy;
+                        let isReserved = false;
+
+                        // 判断当前小三角形中心是否在保留侧
+                        if (axis === 'V') {
+                            if (side === 'left' && cx < k) isReserved = true;
+                            if (side === 'right' && cx > k) isReserved = true;
+                        } else if (axis === 'H') {
+                            if (side === 'top' && cy < k) isReserved = true;
+                            if (side === 'bottom' && cy > k) isReserved = true;
+                        } else if (axis === 'M') {
+                            if (side === 'top-left' && cy - cx < k) isReserved = true;
+                            if (side === 'bottom-right' && cy - cx > k) isReserved = true;
+                        } else if (axis === 'A') {
+                            if (side === 'top-left' && cx + cy < k) isReserved = true;
+                            if (side === 'bottom-right' && cx + cy > k) isReserved = true;
                         }
-                    }
-                } else {
-                    for (let x = 0; x < N; x++) {
-                        for (let y = 0; y < N; y++) {
-                            if (y - x > k) {
-                                let x2 = y - k, y2 = x + k;
-                                if (x2 >= 0 && x2 < N && y2 >= 0 && y2 < N) newGrid[x2][y2] = mirrorColors(grid[x][y], 'M');
-                            }
+
+                        if (isReserved) continue; // 在保留侧，颜色不变
+
+                        // 计算中心点关于折痕的对称点
+                        let cx_src = cx;
+                        let cy_src = cy;
+                        if (axis === 'V') {
+                            cx_src = 2 * k - cx;
+                        } else if (axis === 'H') {
+                            cy_src = 2 * k - cy;
+                        } else if (axis === 'M') {
+                            cx_src = cy - k;
+                            cy_src = cx + k;
+                        } else if (axis === 'A') {
+                            cx_src = k - cy;
+                            cy_src = k - cx;
                         }
-                    }
-                }
-            } else if (axis === 'A') {
-                if (side === 'bottom-left') {
-                    for (let x = 0; x < N; x++) {
-                        for (let y = 0; y < N; y++) {
-                            if (x + y < k) {
-                                let x2 = k - y - 1, y2 = k - x - 1;
-                                if (x2 >= 0 && x2 < N && y2 >= 0 && y2 < N) newGrid[x2][y2] = mirrorColors(grid[x][y], 'A');
-                            }
-                        }
-                    }
-                } else {
-                    for (let x = 0; x < N; x++) {
-                        for (let y = 0; y < N; y++) {
-                            if (x + y > k) {
-                                let x2 = k - y - 1, y2 = k - x - 1;
-                                if (x2 >= 0 && x2 < N && y2 >= 0 && y2 < N) newGrid[x2][y2] = mirrorColors(grid[x][y], 'A');
-                            }
+
+                        let x_src = Math.floor(cx_src);
+                        let y_src = Math.floor(cy_src);
+                        
+                        // 如果对称点落在盘面内，则取该点颜色；如果在盘面外，则保持原样
+                        if (x_src >= 0 && x_src < N && y_src >= 0 && y_src < N) {
+                            let fx = cx_src - x_src;
+                            let fy = cy_src - y_src;
+                            let i_src = getTriangleIndex(fx, fy);
+                            newGrid[x][y][i] = grid[x_src][y_src][i_src];
                         }
                     }
                 }
@@ -573,7 +629,7 @@
             return newGrid;
         }
 
-        function generateTargetGrid(grid, folds) {
+        function generateTargetGrid(rng, grid, folds) {
             let tempGrid = deepCopyGrid(grid);
             solutionSteps = [];
             
@@ -581,20 +637,20 @@
                 let found = false;
                 for (let attempt = 0; attempt < 50; attempt++) {
                     const axes = ['V', 'H', 'M', 'A'];
-                    const axis = axes[Math.floor(Math.random() * axes.length)];
+                    const axis = axes[Math.floor(rng() * axes.length)];
                     let action = null;
                     
                     if (axis === 'V' || axis === 'H') {
-                        const k = Math.floor(Math.random() * (N - 1)) + 1;
-                        const side = Math.random() > 0.5 ? (axis === 'V' ? 'left' : 'top') : (axis === 'V' ? 'right' : 'bottom');
+                        const k = Math.floor(rng() * (N - 1)) + 1;
+                        const side = rng() > 0.5 ? (axis === 'V' ? 'left' : 'top') : (axis === 'V' ? 'right' : 'bottom');
                         action = { axis, k, side };
                     } else if (axis === 'M') {
-                        const k = Math.floor(Math.random() * (2 * N - 1)) - (N - 1);
-                        const side = Math.random() > 0.5 ? 'top-left' : 'bottom-right';
+                        const k = Math.floor(rng() * (2 * N - 1)) - (N - 1);
+                        const side = rng() > 0.5 ? 'top-left' : 'bottom-right';
                         action = { axis, k, side };
                     } else if (axis === 'A') {
-                        const k = Math.floor(Math.random() * (2 * N - 1)) + 1;
-                        const side = Math.random() > 0.5 ? 'bottom-left' : 'top-right';
+                        const k = Math.floor(rng() * (2 * N - 1)) + 1;
+                        const side = rng() > 0.5 ? 'top-left' : 'bottom-right';
                         action = { axis, k, side };
                     }
                     
@@ -606,19 +662,16 @@
                         break; 
                     }
                 }
-                if (!found) {
-                    solutionSteps.push({ axis: 'V', k: 4, side: 'left' }); 
-                }
+                if (!found) solutionSteps.push({ axis: 'V', k: 4, side: 'left' }); 
             }
             return tempGrid;
         }
 
-        // --- 历史记录管理 ---
+        // --- 状态管理 ---
         function pushState(newGrid) {
             if (currentStateIndex < stateHistory.length - 1) {
                 stateHistory = stateHistory.slice(0, currentStateIndex + 1);
             }
-            
             currentGrid = deepCopyGrid(newGrid); 
             stateHistory.push(currentGrid);
             currentStateIndex = stateHistory.length - 1;
@@ -633,8 +686,8 @@
         }
 
         function updateHistoryButtons() {
-            undoBtn.disabled = (currentStateIndex <= 0) || isVictory || isHintMode;
-            redoBtn.disabled = (currentStateIndex >= stateHistory.length - 1) || isVictory || isHintMode;
+            undoBtn.disabled = (currentStateIndex <= 0) || isVictory || isHintMode || isAnimating;
+            redoBtn.disabled = (currentStateIndex >= stateHistory.length - 1) || isVictory || isHintMode || isAnimating;
         }
 
         function goUndo() {
@@ -643,6 +696,7 @@
                 currentGrid = deepCopyGrid(stateHistory[currentStateIndex]);
                 foldCount = currentStateIndex;
                 document.getElementById('fold-count').innerText = foldCount;
+                pendingAction = null; 
                 updateHistoryButtons();
                 updateProgress();
                 renderGame();
@@ -655,13 +709,13 @@
                 currentGrid = deepCopyGrid(stateHistory[currentStateIndex]);
                 foldCount = currentStateIndex;
                 document.getElementById('fold-count').innerText = foldCount;
+                pendingAction = null; 
                 updateHistoryButtons();
                 updateProgress();
                 renderGame();
             }
         }
 
-        // --- 更新进度条 UI ---
         function updateProgress() {
             const matchCount = calculateMatch(currentGrid, targetGrid);
             const percent = Math.floor((matchCount / TOTAL_TRIANGLES) * 100);
@@ -716,46 +770,97 @@
             }
         }
 
-        function drawHighlightLine(ctx, action) {
-            if (!action) return;
-            const width = ctx.canvas.width;
+        function getFoldRegionPath(action) {
+            const width = gameCanvas.width;
             const cellSize = width / N;
+            const { axis, k, side } = action;
+            let path = [];
 
-            ctx.beginPath();
-            ctx.strokeStyle = '#FF4500';
-            ctx.lineWidth = 6;
-            ctx.setLineDash([10, 8]);
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#FF4500';
-
-            if (action.axis === 'V') {
-                let x = action.k * cellSize; ctx.moveTo(x, 0); ctx.lineTo(x, width);
-            } else if (action.axis === 'H') {
-                let y = action.k * cellSize; ctx.moveTo(0, y); ctx.lineTo(width, y);
-            } else if (action.axis === 'M') {
-                let p1x = 0, p1y = action.k * cellSize;
-                let p2x = (N - action.k) * cellSize, p2y = width;
-                if (action.k < 0) { p1x = -action.k * cellSize; p1y = 0; p2x = width; p2y = (N + action.k) * cellSize; }
-                ctx.moveTo(p1x, p1y); ctx.lineTo(p2x, p2y);
-            } else if (action.axis === 'A') {
-                let p1x = 0, p1y = action.k * cellSize;
-                let p2x = action.k * cellSize, p2y = 0;
-                if (action.k > N) { p1x = (action.k - N) * cellSize; p1y = width; p2x = width; p2y = (action.k - N) * cellSize; }
-                ctx.moveTo(p1x, p1y); ctx.lineTo(p2x, p2y);
+            if (axis === 'V') {
+                let x = k * cellSize;
+                if (side === 'left') path = [{x:0, y:0}, {x:x, y:0}, {x:x, y:width}, {x:0, y:width}];
+                else path = [{x:x, y:0}, {x:width, y:0}, {x:width, y:width}, {x:x, y:width}];
+            } else if (axis === 'H') {
+                let y = k * cellSize;
+                if (side === 'top') path = [{x:0, y:0}, {x:width, y:0}, {x:width, y:y}, {x:0, y:y}];
+                else path = [{x:0, y:y}, {x:width, y:y}, {x:width, y:width}, {x:0, y:width}];
+            } else if (axis === 'M') {
+                let c = k * cellSize;
+                if (side === 'top-left') {
+                    let p1 = {x: 0, y: c};
+                    let p2 = {x: width - c, y: width};
+                    if (c < 0) { p1 = {x: -c, y: 0}; p2 = {x: width, y: width + c}; }
+                    path = [{x:0, y:0}, p2, p1];
+                } else {
+                    let p1 = {x: 0, y: c};
+                    let p2 = {x: width - c, y: width};
+                    if (c < 0) { p1 = {x: -c, y: 0}; p2 = {x: width, y: width + c}; }
+                    path = [{x:width, y:width}, p1, p2];
+                }
+            } else if (axis === 'A') {
+                let c = k * cellSize;
+                if (side === 'top-left') {
+                    let p1 = {x: 0, y: c};
+                    let p2 = {x: c, y: 0};
+                    if (c > width) { p1 = {x:c-width, y:width}; p2 = {x:width, y:c-width}; }
+                    path = [{x:0, y:0}, p2, p1];
+                } else {
+                    let p1 = {x: 0, y: c};
+                    let p2 = {x: c, y: 0};
+                    if (c > width) { p1 = {x:c-width, y:width}; p2 = {x:width, y:c-width}; }
+                    path = [{x:width, y:width}, p1, p2];
+                }
             }
-            ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.shadowBlur = 0;
+            return path;
         }
 
-        function drawDragHintLine(ctx, action) {
+        function renderGame(animProgress = 0) {
+            drawBoard(ctx, currentGrid);
+            
+            const currentAction = isAnimating ? animationState.action : (isDragging ? dragAction : pendingAction);
+            
+            if (currentAction) {
+                const path = getFoldRegionPath(currentAction);
+                
+                if (isAnimating || pendingAction) {
+                    ctx.beginPath();
+                    if (path.length > 0) {
+                        ctx.moveTo(path[0].x, path[0].y);
+                        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+                        ctx.closePath();
+                        let alpha = isAnimating ? 0.4 * (1 - animProgress) : 0.15;
+                        ctx.fillStyle = `rgba(255, 69, 0, ${alpha})`;
+                        ctx.fill();
+                    }
+                }
+
+                ctx.save();
+                ctx.strokeStyle = '#FF4500';
+                ctx.lineWidth = isAnimating ? (6 + Math.sin(animProgress * Math.PI) * 4) : 4;
+                ctx.setLineDash([10, 8]);
+                if (isAnimating || pendingAction) { ctx.shadowBlur = 15; ctx.shadowColor = '#FF4500'; }
+                
+                ctx.beginPath();
+                if (path.length > 0) {
+                    ctx.moveTo(path[0].x, path[0].y);
+                    for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+                ctx.restore();
+
+                drawDragHintLine(ctx, currentAction, (isAnimating || pendingAction) ? '#FF4500' : '#ffffff');
+            }
+        }
+
+        function drawDragHintLine(ctx, action, color) {
             if (!action) return;
             const width = ctx.canvas.width;
             const cellSize = width / N;
 
             ctx.beginPath();
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 3;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = color === '#ffffff' ? 3 : 5;
             ctx.setLineDash([8, 6]);
 
             if (action.axis === 'V') {
@@ -777,14 +882,38 @@
             ctx.setLineDash([]);
         }
 
-        function renderGame() {
-            drawBoard(ctx, currentGrid);
-            if (isDragging && dragAction) {
-                drawDragHintLine(ctx, dragAction);
+        // --- 动画执行引擎 ---
+        function startFoldAnimation(action, onComplete) {
+            if (isAnimating) return;
+            isAnimating = true;
+            pendingAction = null; 
+            animationState.action = action;
+            animationState.startTime = performance.now();
+            animationState.onComplete = onComplete;
+
+            function animate(time) {
+                let elapsed = time - animationState.startTime;
+                let progress = Math.min(elapsed / animationState.duration, 1);
+                let easeProgress = 1 - Math.pow(1 - progress, 3);
+                
+                renderGame(easeProgress);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    isAnimating = false;
+                    animationState.action = null;
+                    if (animationState.onComplete) {
+                        animationState.onComplete();
+                    }
+                    renderGame();
+                }
             }
+            requestAnimationFrame(animate);
+            updateHistoryButtons();
         }
 
-        // --- 拖拽交互 ---
+        // --- 交互事件 ---
         function getMousePos(canvas, evt) {
             const rect = canvas.getBoundingClientRect();
             let clientX = evt.clientX;
@@ -800,32 +929,40 @@
         function getDragAction(startX, startY, endX, endY) {
             const dx = endX - startX;
             const dy = endY - startY;
-            if (Math.hypot(dx, dy) < 30) return null;
+            if (Math.hypot(dx, dy) < 20) return null;
 
             const cellSize = gameCanvas.width / N;
-            const projV = Math.abs(dx), projH = Math.abs(dy);
-            const projM = Math.abs(dx + dy) / Math.SQRT2;
-            const projA = Math.abs(dx - dy) / Math.SQRT2;
+            let axis = lockedAxis;
 
-            let maxVal = projV, maxAxis = 'V';
-            if (projH > maxVal) { maxVal = projH; maxAxis = 'H'; }
-            if (projM > maxVal) { maxVal = projM; maxAxis = 'M'; }
-            if (projA > maxVal) { maxVal = projA; maxAxis = 'A'; }
+            if (!axis) {
+                const projV = Math.abs(dx), projH = Math.abs(dy);
+                const projM = Math.abs(dx + dy) / Math.SQRT2;
+                const projA = Math.abs(dx - dy) / Math.SQRT2;
 
-            if (maxAxis === 'V') {
+                let maxVal = projV; axis = 'V';
+                if (projH > maxVal) { maxVal = projH; axis = 'H'; }
+                if (projM > maxVal) { maxVal = projM; axis = 'M'; }
+                if (projA > maxVal) { maxVal = projA; axis = 'A'; }
+            }
+
+            if (axis === 'V') {
                 let k = Math.round(endX / cellSize);
                 if (k <= 0 || k >= N) return null;
-                return { axis: 'V', k: k, side: dx > 0 ? 'left' : 'right' };
-            } else if (maxAxis === 'H') {
+                let side = startX < k * cellSize ? 'left' : 'right';
+                return { axis: 'V', k: k, side: side };
+            } else if (axis === 'H') {
                 let k = Math.round(endY / cellSize);
                 if (k <= 0 || k >= N) return null;
-                return { axis: 'H', k: k, side: dy > 0 ? 'top' : 'bottom' };
-            } else if (maxAxis === 'M') {
+                let side = startY < k * cellSize ? 'top' : 'bottom';
+                return { axis: 'H', k: k, side: side };
+            } else if (axis === 'M') {
                 let k = Math.round((endY - endX) / cellSize);
-                return { axis: 'M', k: k, side: (dx + dy) > 0 ? 'top-left' : 'bottom-right' };
-            } else if (maxAxis === 'A') {
+                let side = (startY - startX) < k * cellSize ? 'top-left' : 'bottom-right';
+                return { axis: 'M', k: k, side: side };
+            } else if (axis === 'A') {
                 let k = Math.round((endY + endX) / cellSize);
-                return { axis: 'A', k: k, side: (dx - dy) > 0 ? 'bottom-left' : 'top-right' };
+                let side = (startX + startY) < k * cellSize ? 'top-left' : 'bottom-right';
+                return { axis: 'A', k: k, side: side };
             }
             return null;
         }
@@ -833,9 +970,12 @@
         function startDrag(e) {
             if (isVictory || isHintMode || isAnimating) return;
             e.preventDefault();
+            
             isDragging = true;
+            hasDragged = false; 
             const pos = getMousePos(gameCanvas, e);
-            startPos = pos; currentPos = pos;
+            startPos = pos; 
+            currentPos = pos;
             dragAction = null;
         }
 
@@ -843,21 +983,59 @@
             if (!isDragging) return;
             e.preventDefault();
             currentPos = getMousePos(gameCanvas, e);
-            dragAction = getDragAction(startPos.x, startPos.y, currentPos.x, currentPos.y);
-            renderGame();
+            
+            const dist = Math.hypot(currentPos.x - startPos.x, currentPos.y - startPos.y);
+            
+            if (dist > 15) {
+                hasDragged = true;
+                pendingAction = null; 
+                dragAction = getDragAction(startPos.x, startPos.y, currentPos.x, currentPos.y);
+                renderGame();
+            }
         }
 
         function endDrag(e) {
             if (!isDragging) return;
             isDragging = false;
             
-            if (dragAction) {
-                const nextGrid = applyFold(currentGrid, dragAction);
-                pushState(nextGrid); 
-            } else {
+            const pos = getMousePos(gameCanvas, e);
+            const dist = Math.hypot(pos.x - startPos.x, pos.y - startPos.y);
+
+            if (hasDragged && dragAction) {
+                pendingAction = dragAction;
                 renderGame();
+            } else if (dist < 15) {
+                // 触发点击/双击判定
+                const now = Date.now();
+                if (now - lastTap < 300) {
+                    if (pendingAction) {
+                        executePendingAction();
+                    }
+                    lastTap = 0; 
+                } else {
+                    lastTap = now;
+                }
             }
             dragAction = null;
+        }
+
+        // 原生双击事件作为双重保险
+        gameCanvas.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            if (isVictory || isHintMode || isAnimating) return;
+            if (pendingAction) {
+                executePendingAction();
+            }
+        });
+
+        function executePendingAction() {
+            if (!pendingAction) return;
+            const action = pendingAction;
+            pendingAction = null;
+            startFoldAnimation(action, () => {
+                const nextGrid = applyFold(currentGrid, action);
+                pushState(nextGrid); 
+            });
         }
 
         gameCanvas.addEventListener('mousedown', startDrag);
@@ -884,6 +1062,7 @@
                 currentGrid = deepCopyGrid(startGrid);
                 stateHistory = [deepCopyGrid(startGrid)];
                 foldCount = 0;
+                pendingAction = null; 
                 document.getElementById('fold-count').innerText = 0;
                 
                 updateHistoryButtons();
@@ -912,34 +1091,30 @@
             }
         });
 
-        // 【修复核心】：正确使用 currentStateIndex 和 solutionSteps 的映射关系
         function demoNextStep() {
-            // 如果当前展示的状态编号已经等于总步骤数，说明演示结束
             if (currentStateIndex >= solutionSteps.length) {
                 showToast("已经是最后一步了");
                 return;
             }
 
-            isAnimating = true;
-            // 当前状态为 0 时，执行 solutionSteps[0]；状态为 1 时，执行 solutionSteps[1]...
             const action = solutionSteps[currentStateIndex];
-
-            drawBoard(ctx, currentGrid);
-            drawHighlightLine(ctx, action);
-
-            setTimeout(() => {
+            startFoldAnimation(action, () => {
                 const nextGrid = applyFold(currentGrid, action);
                 pushState(nextGrid); 
-                isAnimating = false;
                 showToast(`演示第 ${currentStateIndex} / ${solutionSteps.length} 步`);
-            }, 1000);
+            });
         }
 
         // --- 控制逻辑 ---
-        function initGame() {
+        function loadLevel(levelId) {
+            currentLevelId = levelId;
+            document.getElementById('level-id').innerText = levelId;
+            
             isVictory = false;
             isDragging = false;
+            hasDragged = false;
             dragAction = null;
+            pendingAction = null;
             isHintMode = false;
             isAnimating = false;
             foldCount = 0;
@@ -948,17 +1123,20 @@
             overlay.classList.remove('show');
             document.getElementById('victory-popup').classList.remove('show');
             rulesPopup.classList.remove('show');
+            customIdPopup.classList.remove('show');
 
-            targetFoldCount = Math.floor(Math.random() * 3) + 4; // 4-6次
+            const rng = mulberry32(levelId);
+
+            targetFoldCount = Math.floor(rng() * 3) + 4;
             document.getElementById('target-folds').innerText = targetFoldCount;
             document.getElementById('status-text').innerText = '进行中';
             document.getElementById('status-text').style.color = '#5bc0de';
 
-            startGrid = createRandomGrid();
-            targetGrid = generateTargetGrid(startGrid, targetFoldCount);
+            startGrid = createRandomGrid(rng);
+            targetGrid = generateTargetGrid(rng, startGrid, targetFoldCount);
             
             if (isGridEqual(startGrid, targetGrid)) {
-                return initGame();
+                return loadLevel(levelId + 1 > 100000 ? 1 : levelId + 1);
             }
             
             stateHistory = [deepCopyGrid(startGrid)];
@@ -970,6 +1148,32 @@
             updateProgress(); 
             renderGame();
             drawBoard(tCtx, targetGrid);
+            startTimer();
+        }
+
+        function resetCurrentLevel() {
+            if (isAnimating) return;
+            isVictory = false;
+            isDragging = false;
+            hasDragged = false;
+            pendingAction = null;
+            isHintMode = false;
+            
+            hintBtn.classList.remove('active');
+            overlay.classList.remove('show');
+            document.getElementById('victory-popup').classList.remove('show');
+
+            stateHistory = [deepCopyGrid(startGrid)];
+            currentStateIndex = 0;
+            currentGrid = deepCopyGrid(startGrid);
+            
+            document.getElementById('fold-count').innerText = 0;
+            document.getElementById('status-text').innerText = '进行中';
+            document.getElementById('status-text').style.color = '#5bc0de';
+            
+            updateHistoryButtons();
+            updateProgress();
+            renderGame();
             startTimer();
         }
 
@@ -999,39 +1203,49 @@
                 document.getElementById('status-text').style.color = '#FFD700';
                 updateHistoryButtons();
             } else {
-                initGame();
+                let nextId = Math.floor(Math.random() * 100000) + 1;
+                loadLevel(nextId);
             }
         }
 
-        function closeRules() {
-            rulesPopup.classList.remove('show');
+        function closeRules() { rulesPopup.classList.remove('show'); }
+
+        function openCustomPopup() {
+            if (isAnimating) return;
+            customIdInput.value = currentLevelId;
+            customIdPopup.classList.add('show');
+        }
+        
+        function closeCustomPopup() { customIdPopup.classList.remove('show'); }
+
+        function confirmCustomId() {
+            let val = parseInt(customIdInput.value);
+            if (isNaN(val) || val < 1 || val > 100000) {
+                showToast("请输入 1 到 100000 之间的数字");
+                return;
+            }
+            loadLevel(val);
         }
 
         function showToast(msg) {
             toastEl.innerText = msg;
             toastEl.classList.add('show');
-            setTimeout(() => { toastEl.classList.remove('show'); }, 2000);
+            if (toastEl.timer) clearTimeout(toastEl.timer);
+            toastEl.timer = setTimeout(() => { 
+                toastEl.classList.remove('show'); 
+            }, 2000);
         }
 
         undoBtn.addEventListener('click', goUndo);
         redoBtn.addEventListener('click', goRedo);
-        restartBtn.addEventListener('click', initGame);
         helpBtn.addEventListener('click', () => rulesPopup.classList.add('show'));
         
-        cheatBtn.addEventListener('click', () => {
-            if (isVictory || isDragging || isHintMode || isAnimating) return;
-            const axes = ['V', 'H', 'M', 'A'];
-            const axis = axes[Math.floor(Math.random() * axes.length)];
-            let action;
-            
-            if (axis === 'V') action = { axis, k: Math.floor(Math.random()*(N-1))+1, side: Math.random()>0.5?'left':'right' };
-            if (axis === 'H') action = { axis, k: Math.floor(Math.random()*(N-1))+1, side: Math.random()>0.5?'top':'bottom' };
-            if (axis === 'M') action = { axis, k: Math.floor(Math.random()*(2*N-1))-(N-1), side: Math.random()>0.5?'top-left':'bottom-right' };
-            if (axis === 'A') action = { axis, k: Math.floor(Math.random()*(2*N-1))+1, side: Math.random()>0.5?'bottom-left':'top-right' };
-            
-            const nextGrid = applyFold(currentGrid, action);
-            pushState(nextGrid);
+        document.getElementById('reset-btn').addEventListener('click', resetCurrentLevel);
+        document.getElementById('new-btn').addEventListener('click', () => {
+            let nextId = Math.floor(Math.random() * 100000) + 1;
+            loadLevel(nextId);
         });
+        document.getElementById('custom-btn').addEventListener('click', openCustomPopup);
 
         let timeLeft = 300;
         let timerInterval;
@@ -1055,9 +1269,7 @@
             }, 1000);
         }
 
-        function stopTimer() {
-            clearInterval(timerInterval);
-        }
+        function stopTimer() { clearInterval(timerInterval); }
 
         function updateTimerDisplay() {
             const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
@@ -1065,7 +1277,7 @@
             document.getElementById('timer').innerText = `${m}:${s}`;
         }
 
-        initGame();
+        loadLevel(Math.floor(Math.random() * 100000) + 1);
     </script>
 </body>
 </html>
