@@ -1,15 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <!-- 限制移动端缩放，保证布局稳定 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>色块寻异</title>
     <style>
         :root {
             --bg-color: #0b0e14;
             --panel-bg: #131724;
-            --block-bg: #1c2135;
+            --block-bg: #1a1f30;
             --block-border: #2a3045;
             --dot-off: #2c324a;
             --text-main: #e2e8f0;
@@ -24,6 +22,7 @@
             margin: 0;
             padding: 0;
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -34,26 +33,49 @@
             flex-direction: column;
             align-items: center;
             height: 100vh;
+            height: 100dvh;
             width: 100vw;
-            overflow: hidden; /* 禁止滚动 */
-            padding: 5px;
+            overflow: hidden;
         }
 
-        /* 顶部控制区 */
+        /* 固定按钮 */
+        .fixed-btn {
+            position: fixed;
+            top: 12px;
+            width: 36px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 10000;
+            color: #fff;
+            backdrop-filter: blur(4px);
+            transition: background 0.2s;
+        }
+        .fixed-btn:hover { background: rgba(255, 255, 255, 0.2); }
+        #fullscreen-btn { left: 12px; }
+        #lock-btn { right: 12px; }
+
+        /* 顶部信息区 */
         .top-ui {
             display: flex;
             flex-direction: column;
             align-items: center;
             flex-shrink: 0;
-            margin-bottom: 5px;
             width: 100%;
+            padding-top: 8px;
+            transition: all 0.3s;
         }
 
         .game-title {
             font-size: clamp(20px, 3.5vh, 32px);
             font-weight: bold;
             letter-spacing: 4px;
-            margin: 5px 0;
+            margin: 5px 0 10px;
             color: #fff;
             text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
         }
@@ -61,11 +83,11 @@
         .controls {
             display: flex;
             gap: 15px;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
 
         .btn {
-            padding: 6px 20px;
+            padding: 8px 24px;
             font-size: clamp(14px, 2vh, 18px);
             font-weight: bold;
             border: none;
@@ -94,7 +116,7 @@
             font-size: clamp(14px, 2vh, 20px);
             font-weight: bold;
             font-family: monospace;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
 
         .timer { color: #93c5fd; }
@@ -107,10 +129,11 @@
             font-size: clamp(16px, 2.5vh, 22px);
             font-weight: bold;
             background: rgba(19, 23, 36, 0.8);
-            padding: 6px 30px;
+            padding: 8px 30px;
             border-radius: 10px;
             border: 1px solid var(--block-border);
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            margin-bottom: 10px;
         }
 
         .header span {
@@ -123,74 +146,73 @@
         .text-remaining { color: var(--text-remaining); }
         .text-mistake { color: var(--text-mistake); }
 
-        /* 盘面主体区 - 占据剩余所有空间 */
+        /* --- 全屏模式：极致压缩UI --- */
+        body.is-fullscreen .top-ui { padding-top: 2px; }
+        body.is-fullscreen .game-title,
+        body.is-fullscreen .controls { display: none; }
+        body.is-fullscreen .info-bar {
+            font-size: 12px; gap: 15px; margin-bottom: 2px; margin-top: 2px;
+        }
+        body.is-fullscreen .header {
+            font-size: 14px; gap: 15px; padding: 2px 20px; margin-bottom: 2px;
+        }
+        body.is-fullscreen .header span { font-size: 16px; }
+        body.is-fullscreen .game-container {
+            padding: 2px; gap: 1vmin;
+        }
+
+        /* --- 盘面主体区 --- */
         .game-container {
             flex: 1;
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 10px;
             width: 100%;
-            min-height: 0; /* 关键：允许Flex子元素在内容溢出时收缩 */
+            min-height: 0; /* 关键，防撑破 */
+            padding: 4px;
+            overflow: hidden;
+            gap: 1.5vmin; 
+            transition: all 0.3s;
         }
 
         /* 单面墙 */
         .wall {
             background: var(--panel-bg);
-            border: 2px solid var(--block-border);
-            border-radius: 12px;
-            padding: 6px;
+            border: 1px solid var(--block-border);
+            border-radius: 8px;
+            padding: 0.5vmin;
             display: grid;
-            grid-template-columns: repeat(10, 1fr);
-            grid-template-rows: repeat(10, 1fr);
-            gap: 3px;
+            grid-template-columns: repeat(10, minmax(0, 1fr));
+            grid-template-rows: repeat(10, minmax(0, 1fr));
+            gap: 0.5vmin; /* 方块之间的间隙 */
             box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
             box-sizing: border-box;
-        }
-
-        /* 横屏（默认左右排布） */
-        @media (orientation: landscape) {
-            .game-container {
-                flex-direction: row;
-            }
-            .wall {
-                height: 100%;
-                aspect-ratio: 1 / 1;
-                max-width: 48%; /* 防止超出宽度 */
-            }
-        }
-
-        /* 竖屏（上下排布） */
-        @media (orientation: portrait) {
-            .game-container {
-                flex-direction: column;
-            }
-            .wall {
-                width: 95%;
-                aspect-ratio: 1 / 1;
-                max-height: 48%; /* 防止超出高度 */
-            }
+            aspect-ratio: 1 / 1;
+            min-width: 0;
+            min-height: 0;
         }
 
         /* 单个魔方块 */
         .block {
             background: var(--block-bg);
-            border: 1px solid var(--block-border);
+            /* 满足要求：边框加粗到 2px，并改为黑灰色 */
+            border: 4px solid #3b445c; 
             border-radius: 4px;
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            padding: 1px; /* 微小内边距 */
-            gap: 1px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-rows: repeat(3, minmax(0, 1fr));
+            padding: 1px; 
+            gap: 1px; 
             cursor: pointer;
             transition: all 0.1s ease;
-            box-sizing: border-box;
+            min-width: 0;
+            min-height: 0;
         }
 
         .block:hover {
-            border-color: #6b7280;
+            /* 悬浮时略微发光，但不改变白边 */
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
             z-index: 1;
-            box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
         }
 
         .block.found {
@@ -200,14 +222,28 @@
             pointer-events: none;
         }
 
-        /* 圆点 */
+        /* 圆点 - 满足要求：从 95% 缩小至 75%，更加精致 */
         .dot {
-            width: 80%;
-            height: 80%;
+            width: 75%;
+            height: 75%;
             border-radius: 50%;
-            margin: auto; /* 居中，避免变形 */
+            margin: auto;
             background-color: var(--dot-off);
+            box-sizing: border-box;
+            /* 增加内部高光，让圆点更有质感 */
+            box-shadow: inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px rgba(255,255,255,0.15);
             transition: background-color 0.2s ease;
+        }
+
+        /* --- 方向自适应 --- */
+        @media (orientation: portrait) {
+            .game-container { flex-direction: column; }
+            .wall { width: 100%; height: auto; max-height: 48%; }
+        }
+
+        @media (orientation: landscape) {
+            .game-container { flex-direction: row; }
+            .wall { height: 100%; width: auto; max-width: 49%; }
         }
 
         /* 模态框 */
@@ -218,7 +254,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
+            z-index: 10000;
         }
         .modal-overlay.hidden { display: none; }
 
@@ -284,7 +320,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 2000;
+            z-index: 10001;
             pointer-events: none;
         }
         .toast-overlay.hidden { display: none; }
@@ -306,7 +342,9 @@
 </head>
 <body>
 
-    <!-- 模态框 -->
+    <div class="fixed-btn" id="fullscreen-btn" title="全屏">⛶</div>
+    <div class="fixed-btn" id="lock-btn" title="锁定界面">🔓</div>
+
     <div id="modal-overlay" class="modal-overlay hidden">
         <div class="modal-content">
             <h3>请输入题号（1-6位字母和数字）：</h3>
@@ -318,7 +356,6 @@
         </div>
     </div>
 
-    <!-- 提示框 -->
     <div id="toast-overlay" class="toast-overlay hidden">
         <div class="toast-content" id="toast-text"></div>
     </div>
@@ -343,47 +380,28 @@
         </div>
     </div>
 
-    <!-- 游戏盘面区 -->
     <div class="game-container" id="game-container">
         <div class="wall" id="wall-left"></div>
         <div class="wall" id="wall-right"></div>
     </div>
 
     <script>
-        // 游戏配置
         const ROWS = 10;
         const COLS = 10;
         const DIFF_COUNT = 12;
-        // 调整后的暗淡颜色（不刺眼）
         const COLORS = [
-            '#c0392b', // 暗红
-            '#d35400', // 暗橙
-            '#d4ac0d', // 暗黄
-            '#27ae60', // 暗绿
-            '#2980b9', // 暗蓝
-            '#17a589', // 暗青
-            '#8e44ad'  // 暗紫
+            '#c0392b', '#d35400', '#d4ac0d', '#27ae60', 
+            '#2980b9', '#17a589', '#8e44ad'
         ];
 
-        // 游戏状态
         let state = {
-            grid: [],
-            found: 0,
-            remaining: DIFF_COUNT,
-            mistakes: 0,
-            isPlaying: false
+            grid: [], found: 0, remaining: DIFF_COUNT, mistakes: 0, isPlaying: false
         };
 
-        // 计时器状态
-        let timerInterval;
-        let secondsElapsed = 0;
-        let minutesElapsed = 0;
-        
-        // 提示框状态
-        let toastTimeout;
-        let toastDismissHandler = null;
+        let timerInterval, secondsElapsed = 0, minutesElapsed = 0;
+        let toastTimeout, toastDismissHandler = null;
+        let isLocked = false;
 
-        // DOM 元素
         const leftWall = document.getElementById('wall-left');
         const rightWall = document.getElementById('wall-right');
         const foundEl = document.getElementById('found-count');
@@ -402,7 +420,10 @@
         const toastOverlay = document.getElementById('toast-overlay');
         const toastText = document.getElementById('toast-text');
 
-        // 初始化空盘面
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const lockBtn = document.getElementById('lock-btn');
+        const metaViewport = document.querySelector('meta[name="viewport"]');
+
         function init() {
             leftWall.innerHTML = '';
             rightWall.innerHTML = '';
@@ -414,7 +435,6 @@
             levelIdDisplay.textContent = "------";
         }
 
-        // 创建空方块
         function createEmptyBlockElement() {
             const block = document.createElement('div');
             block.className = 'block';
@@ -426,7 +446,6 @@
             return block;
         }
 
-        // 生成随机点阵
         function generateRandomPoints() {
             const points = [];
             for (let i = 0; i < 9; i++) {
@@ -439,7 +458,6 @@
             return points;
         }
 
-        // 生成随机题号
         function generateRandomId() {
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             const length = Math.floor(Math.random() * 6) + 1;
@@ -450,7 +468,6 @@
             return result;
         }
 
-        // 计时器控制
         function startTimer() {
             clearInterval(timerInterval);
             secondsElapsed = 0;
@@ -466,17 +483,12 @@
             }, 1000);
         }
 
-        function stopTimer() {
-            clearInterval(timerInterval);
-        }
+        function stopTimer() { clearInterval(timerInterval); }
 
         function updateTimerDisplay() {
-            const minStr = minutesElapsed.toString().padStart(2, '0');
-            const secStr = secondsElapsed.toString().padStart(2, '0');
-            timerDisplay.textContent = `${minStr}:${secStr}`;
+            timerDisplay.textContent = `${minutesElapsed.toString().padStart(2, '0')}:${secondsElapsed.toString().padStart(2, '0')}`;
         }
 
-        // 开始游戏
         function startGame(levelId) {
             if (!levelId) levelId = generateRandomId();
             levelIdDisplay.textContent = levelId;
@@ -487,7 +499,6 @@
             state.isPlaying = true;
             updateUI();
 
-            // 生成基础数据
             state.grid = [];
             for (let i = 0; i < ROWS * COLS; i++) {
                 const basePoints = generateRandomPoints();
@@ -500,7 +511,6 @@
                 });
             }
 
-            // 随机挑选差异方块
             const indices = Array.from({ length: ROWS * COLS }, (_, i) => i);
             indices.sort(() => Math.random() - 0.5);
             const diffIndices = indices.slice(0, DIFF_COUNT);
@@ -508,22 +518,18 @@
             diffIndices.forEach(idx => {
                 const block = state.grid[idx];
                 block.isDifferent = true;
-
                 const numPointsToChange = Math.random() < 0.5 ? 1 : 2;
                 const pointIndices = [0,1,2,3,4,5,6,7,8].sort(() => Math.random() - 0.5).slice(0, numPointsToChange);
 
                 pointIndices.forEach(pIdx => {
                     const leftColor = block.left[pIdx].color;
-
                     if (Math.random() < 0.5) {
-                        // 颜色变无色，或无色变颜色
                         if (leftColor) {
                             block.right[pIdx].color = null;
                         } else {
                             block.right[pIdx].color = COLORS[Math.floor(Math.random() * COLORS.length)];
                         }
                     } else {
-                        // 颜色改变
                         if (leftColor) {
                             let newColor;
                             do {
@@ -541,24 +547,19 @@
             startTimer();
         }
 
-        // 渲染棋盘
         function renderBoard() {
             leftWall.innerHTML = '';
             rightWall.innerHTML = '';
-
             state.grid.forEach(blockData => {
                 leftWall.appendChild(createBlockElement(blockData, 'left'));
                 rightWall.appendChild(createBlockElement(blockData, 'right'));
             });
         }
 
-        // 渲染方块
         function createBlockElement(blockData, side) {
             const block = document.createElement('div');
             block.className = 'block';
-            if (blockData.found) {
-                block.classList.add('found');
-            }
+            if (blockData.found) block.classList.add('found');
 
             const points = side === 'left' ? blockData.left : blockData.right;
             
@@ -567,7 +568,7 @@
                 dot.className = 'dot';
                 if (p.color) {
                     dot.style.backgroundColor = p.color;
-                    dot.style.boxShadow = `0 0 2px ${p.color}`;
+                    dot.style.boxShadow = `inset -1px -1px 2px rgba(0,0,0,0.4), inset 1px 1px 2px rgba(255,255,255,0.3)`; 
                 }
                 block.appendChild(dot);
             });
@@ -576,7 +577,6 @@
             return block;
         }
 
-        // 处理点击
         function handleBlockClick(blockData, side, blockEl) {
             if (!state.isPlaying || blockData.found) return;
 
@@ -599,8 +599,6 @@
             } else {
                 state.mistakes++;
                 updateUI();
-                
-                // 错误抖动动画
                 blockEl.style.transform = 'translateX(2px)';
                 setTimeout(() => blockEl.style.transform = 'translateX(-2px)', 50);
                 setTimeout(() => blockEl.style.transform = 'translateX(2px)', 100);
@@ -614,10 +612,8 @@
             mistakeEl.textContent = state.mistakes;
         }
         
-        // 显示提示框
         function showToast(text, isSuccess = true) {
             toastText.innerHTML = text;
-            
             if (isSuccess) {
                 toastText.style.borderColor = 'var(--success-glow)';
                 toastText.style.boxShadow = '0 0 30px rgba(74, 222, 128, 0.3)';
@@ -625,12 +621,9 @@
                 toastText.style.borderColor = 'var(--text-mistake)';
                 toastText.style.boxShadow = '0 0 30px rgba(248, 113, 113, 0.3)';
             }
-            
             toastOverlay.classList.remove('hidden');
             
-            if (toastDismissHandler) {
-                document.removeEventListener('click', toastDismissHandler);
-            }
+            if (toastDismissHandler) document.removeEventListener('click', toastDismissHandler);
             
             toastDismissHandler = () => {
                 toastOverlay.classList.add('hidden');
@@ -639,27 +632,18 @@
                 toastDismissHandler = null;
             };
             
-            setTimeout(() => {
-                document.addEventListener('click', toastDismissHandler);
-            }, 10);
-            
+            setTimeout(() => document.addEventListener('click', toastDismissHandler), 10);
             clearTimeout(toastTimeout);
             toastTimeout = setTimeout(toastDismissHandler, 1500);
         }
 
-        // 事件绑定
         startBtn.addEventListener('click', () => startGame());
-        
         customBtn.addEventListener('click', () => {
             customIdInput.value = '';
             modalOverlay.classList.remove('hidden');
             customIdInput.focus();
         });
-        
-        modalCancel.addEventListener('click', () => {
-            modalOverlay.classList.add('hidden');
-        });
-        
+        modalCancel.addEventListener('click', () => modalOverlay.classList.add('hidden'));
         modalConfirm.addEventListener('click', () => {
             const val = customIdInput.value.trim();
             if (!/^[A-Za-z0-9]{1,6}$/.test(val)) {
@@ -669,12 +653,53 @@
             modalOverlay.classList.add('hidden');
             startGame(val.toUpperCase());
         });
-        
         customIdInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') modalConfirm.click();
         });
 
-        // 启动初始化
+        // 全屏逻辑
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    showToast('全屏失败或不支持', false);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                fullscreenBtn.textContent = '🗗';
+                document.body.classList.add('is-fullscreen');
+                setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 50);
+            } else {
+                fullscreenBtn.textContent = '⛶';
+                document.body.classList.remove('is-fullscreen');
+                setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 50);
+            }
+        });
+
+        // 锁定逻辑
+        lockBtn.addEventListener('click', () => {
+            isLocked = !isLocked;
+            lockBtn.textContent = isLocked ? '🔒' : '🔓';
+            
+            if (isLocked) {
+                document.body.style.overflow = 'hidden';
+                document.documentElement.style.overflow = 'hidden';
+                metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+            } else {
+                document.body.style.overflow = '';
+                document.documentElement.style.overflow = '';
+                metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, user-scalable=yes');
+            }
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (isLocked) e.preventDefault();
+        }, { passive: false });
+
         init();
     </script>
 </body>
