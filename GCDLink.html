@@ -170,6 +170,8 @@
             position: absolute;
             top: 0;
             left: 0;
+            /* 增加自动行高严格均分 */
+            grid-auto-rows: 1fr; 
         }
 
         #line-canvas {
@@ -196,6 +198,8 @@
             user-select: none;
             position: relative;
             color: #e0e0e0;
+            /* 强制正方形，防拉伸 */
+            aspect-ratio: 1 / 1; 
         }
 
         .cell:hover:not(.eliminated) {
@@ -240,7 +244,7 @@
             transform: scale(0.3);
         }
 
-        /* 规则弹窗 */
+        /* --- 规则弹窗 --- */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -271,24 +275,73 @@
             font-size: 24px; cursor: pointer;
         }
         .close-btn:hover { color: white; }
+
+        /* --- 自定义 Prompt 输入弹窗 --- */
+        .prompt-content {
+            text-align: center;
+            max-width: 320px;
+        }
+        .prompt-input {
+            width: 80%;
+            padding: 10px;
+            margin-bottom: 20px;
+            background: #0f3460;
+            color: white;
+            border: 1px solid var(--cell-border);
+            border-radius: 6px;
+            outline: none;
+            font-size: 16px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .prompt-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        /* --- 自定义 Toast 提示 --- */
+        .toast-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            pointer-events: none; /* 让点击事件穿透，用户可以点到下层 */
+        }
+        .toast-content {
+            background-color: rgba(22, 33, 62, 0.95);
+            padding: 20px 30px;
+            border-radius: 12px;
+            border: 1px solid var(--success-color);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+            text-align: center;
+            pointer-events: none; /* 框本身也不拦截点击 */
+            animation: popIn 0.3s ease-out;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- 1. 标题与规则 -->
+    <!-- 标题与规则 -->
     <div class="header-row">
         <h1 class="title">公约数列</h1>
         <button class="rule-btn" id="rule-btn">?</button>
     </div>
 
-    <!-- 2. 开始 / 指定编号 / 重置盘面 -->
+    <!-- 操作栏 -->
     <div class="action-row-1">
         <button id="start-btn" class="btn start-btn">开始游戏</button>
         <button id="specify-seed-btn" class="btn">指定编号</button>
         <button id="reset-board-btn" class="btn" disabled>重置盘面</button>
     </div>
 
-    <!-- 3. 尺寸切换 -->
+    <!-- 尺寸切换 -->
     <div class="size-row" id="size-controls">
         <button class="btn size-btn" data-size="6">6x6</button>
         <button class="btn size-btn" data-size="7">7x7</button>
@@ -297,10 +350,10 @@
         <button class="btn size-btn" data-size="10">10x10</button>
     </div>
 
-    <!-- 4. 作答时间 -->
+    <!-- 时间 -->
     <div class="timer-row">作答时间: <span id="timer">00:00</span></div>
 
-    <!-- 5. 撤回 / 编号显示 / 前进 -->
+    <!-- 编号与撤回前进 -->
     <div class="id-and-undo-row">
         <button id="undo-btn" class="btn" disabled>撤回</button>
         <div class="puzzle-id">题目编号: <span id="puzzle-id-val">------</span></div>
@@ -322,7 +375,29 @@
             <p>2. 如果商为 <strong>1</strong>，则该数字被消除；如果商大于1，则该数字将更新为商并保留。</p>
             <p>3. <strong>连通性限制：</strong>选择的两个数字之间，必须存在一条仅经过<strong>盘面内空白区域</strong>（即已消除格子的纯空白通路）。连线<strong>不能走到盘面外，且最多只能拐2个弯</strong>。</p>
             <p>4. <strong>颜色提示：</strong>当两数字连通且最大公约数>1时，连线和外框显示 <span class="color-green">绿色</span>；若无法连通/拐弯超标/公约数为1，则显示 <span class="color-red">红色</span> 且无效。</p>
-            <p>5. 消除盘面上所有的数字即可获得胜利！(注：本游戏采用 <strong>镜像质因子平衡技术</strong>，保证全局因子绝对偶数，绝无落单死局。)</p>
+            <p>5. 消除盘面上所有的数字即可获得胜利！(注：本游戏采用镜像平衡算法，绝不卡顿且保证绝对有解。)</p>
+        </div>
+    </div>
+
+    <!-- 自定义输入框弹窗 -->
+    <div class="modal-overlay" id="custom-prompt-modal">
+        <div class="modal-content prompt-content">
+            <h3 style="margin-top: 0; color: var(--accent-color);">指定编号</h3>
+            <p style="font-size: 14px; color: #ccc; margin-bottom: 15px;">请输入6位题目编号（字母和数字组合）：</p>
+            <input type="text" id="custom-prompt-input" class="prompt-input" maxlength="6" placeholder="例如: A1B2C3">
+            <div class="prompt-actions">
+                <button class="btn start-btn" id="custom-prompt-ok">确定</button>
+                <button class="btn" id="custom-prompt-cancel">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自定义 Toast 提示 -->
+    <div id="custom-toast" class="toast-overlay">
+        <div class="toast-content">
+            <h3 style="margin: 0 0 10px 0; color: var(--success-color);">恭喜你！</h3>
+            <p style="margin: 0; font-size: 15px;">成功消除了所有数字！</p>
+            <p style="margin: 10px 0 0 0; color: #ffd369; font-weight: bold;">作答时间：<span id="toast-time">00:00</span></p>
         </div>
     </div>
 
@@ -343,6 +418,7 @@
         
         let timerInterval = null;
         let seconds = 0;
+        let toastTimeout = null;
 
         // --- DOM 元素 ---
         const gridEl = document.getElementById('grid');
@@ -359,6 +435,14 @@
         const ruleModal = document.getElementById('rule-modal');
         const closeRuleBtn = document.getElementById('close-rule');
         const puzzleIdVal = document.getElementById('puzzle-id-val');
+        
+        const promptModal = document.getElementById('custom-prompt-modal');
+        const promptInput = document.getElementById('custom-prompt-input');
+        const promptOk = document.getElementById('custom-prompt-ok');
+        const promptCancel = document.getElementById('custom-prompt-cancel');
+        
+        const toastEl = document.getElementById('custom-toast');
+        const toastTimeEl = document.getElementById('toast-time');
 
         // --- 伪随机数引擎 ---
         let seedState = 0;
@@ -472,7 +556,7 @@
             return null;
         }
 
-        // --- 完美镜像成对生成法 (100%偶数质因子, 秒生成) ---
+        // --- 完美镜像成对生成法 ---
         function generateSolvableBoard(size) {
             const N = size * size;
             let list = [];
@@ -482,18 +566,15 @@
             const largePrimes = [53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
             const mediumPrimes = [11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47];
             
-            // 我们每次添加的“元素块”必定保证质因数总数为偶数
             while (pairsCount < targetPairs) {
                 let r = random();
                 let remain = targetPairs - pairsCount;
                 
                 if (r < 0.3 && remain >= 1) {
-                    // 块A: 大质数对 [p, p] (占一对)
                     let p = largePrimes[randomInt(0, largePrimes.length)];
                     list.push(p, p);
                     pairsCount++;
                 } else if (r < 0.6 && remain >= 2) {
-                    // 块B: 中质数倍数 [p, p*m] 两份 (占两对)
                     let p = mediumPrimes[randomInt(0, mediumPrimes.length)];
                     let m = randomInt(2, 4);
                     let v2 = p * m > 99 ? p * 2 : p * m;
@@ -501,7 +582,6 @@
                     list.push(p, v2);
                     pairsCount += 2;
                 } else if (r < 0.8 && remain >= 2) {
-                    // 块C: 合数公约数 [a, b] 两份 (占两对)
                     let base = randomInt(2, 10);
                     let m1 = randomInt(2, Math.floor(99/base));
                     let m2 = randomInt(2, Math.floor(99/base));
@@ -511,7 +591,6 @@
                     list.push(a, b);
                     pairsCount += 2;
                 } else if (remain >= 1) {
-                    // 块D: 小数字对 [x, x]
                     let x = [2, 3, 4, 6, 8, 9, 12][randomInt(0, 7)];
                     list.push(x, x);
                     pairsCount++;
@@ -521,10 +600,8 @@
                 }
             }
             
-            // 打乱
             shuffle(list);
             
-            // 转二维
             const result = [];
             for (let r = 0; r < size; r++) {
                 const row = [];
@@ -534,8 +611,7 @@
                 result.push(row);
             }
             
-            // --- 强制开局首对必连通 ---
-            // 查找全盘，找一个能和 result[0][0] 消除的数字，把它换到 (0,1) 位置
+            // 强制开局首对必连通
             let val00 = result[0][0];
             let found = false;
             for (let r = 0; r < size && !found; r++) {
@@ -658,6 +734,9 @@
         }
 
         function startGame(seedStr = null) {
+            // 无论何时点击开始，瞬间隐藏 Toast
+            hideToast();
+
             if (isPlaying) resetGame();
             
             isPlaying = true;
@@ -673,14 +752,15 @@
             
             srand(seed);
             
-            // 生成数据
             board = generateSolvableBoard(currentSize);
             initialBoard = JSON.parse(JSON.stringify(board)); 
             historyStack = [JSON.parse(JSON.stringify(board))]; 
             redoStack = [];
             
             gridEl.innerHTML = '';
+            // 关键修复：行列严格设置为 1fr，解决拉伸问题
             gridEl.style.gridTemplateColumns = `repeat(${currentSize}, 1fr)`;
+            gridEl.style.gridTemplateRows = `repeat(${currentSize}, 1fr)`;
 
             for (let r = 0; r < currentSize; r++) {
                 for (let c = 0; c < currentSize; c++) {
@@ -865,11 +945,37 @@
                 isGameOver = true;
                 stopTimer();
                 setTimeout(() => {
-                    alert(`恭喜你！成功消除了所有数字！\n作答时间：${formatTime(seconds)}`);
-                    resetGame(); 
+                    showToast(formatTime(seconds));
                 }, 400);
             }
         }
+
+        // --- 自定义 Toast 控制 ---
+        function showToast(timeStr) {
+            toastTimeEl.textContent = timeStr;
+            toastEl.style.display = 'flex';
+            
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                hideToast();
+            }, 1500);
+        }
+
+        function hideToast() {
+            toastEl.style.display = 'none';
+            if (toastTimeout) {
+                clearTimeout(toastTimeout);
+                toastTimeout = null;
+            }
+        }
+
+        // --- 全局点击拦截（用于隐藏 Toast） ---
+        // 使用捕获阶段，确保即使点到下层按钮，也能第一时间把 Toast 关掉
+        window.addEventListener('click', (e) => {
+            if (toastEl.style.display === 'flex') {
+                hideToast();
+            }
+        }, true);
 
         // --- 按钮事件 ---
         sizeBtns.forEach(btn => {
@@ -884,16 +990,31 @@
 
         startBtn.addEventListener('click', () => startGame());
 
+        // 自定义指定编号弹窗逻辑
         specifySeedBtn.addEventListener('click', () => {
-            let seed = prompt('请输入6位题目编号（字母和数字组合）：');
-            if (seed === null) return;
-            seed = seed.trim().toUpperCase();
-            
+            promptInput.value = '';
+            promptInput.style.borderColor = 'var(--cell-border)';
+            promptModal.style.display = 'flex';
+            setTimeout(() => promptInput.focus(), 100);
+        });
+
+        promptCancel.addEventListener('click', () => {
+            promptModal.style.display = 'none';
+        });
+
+        promptOk.addEventListener('click', () => {
+            let seed = promptInput.value.trim().toUpperCase();
             if (seed.length !== 6 || !/^[A-Z0-9]{6}$/.test(seed)) {
-                alert('编号格式错误！必须是由6位字母或数字组成。');
+                promptInput.style.borderColor = 'var(--danger-color)';
                 return;
             }
+            promptModal.style.display = 'none';
             startGame(seed);
+        });
+
+        // 支持输入框回车确认
+        promptInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') promptOk.click();
         });
 
         resetBoardBtn.addEventListener('click', () => {
