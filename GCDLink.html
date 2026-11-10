@@ -37,7 +37,7 @@
             align-items: center;
             justify-content: center;
             gap: 15px;
-            margin: 10px 0 15px 0;
+            margin: 5px 0 15px 0;
         }
 
         .title {
@@ -67,34 +67,56 @@
         }
         .rule-btn:hover { transform: scale(1.1); }
 
-        .timer-row {
-            font-size: 18px;
-            font-weight: bold;
-            color: #ffd369;
-            letter-spacing: 1px;
+        /* 操作栏 */
+        .action-row-1 {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
             margin-bottom: 15px;
+            flex-wrap: wrap;
+            width: 100%;
         }
 
+        /* 尺寸与时间 */
         .size-row {
             display: flex;
             gap: 8px;
             justify-content: center;
             flex-wrap: wrap;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             width: 100%;
         }
 
-        .action-row {
+        .timer-row {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffd369;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        /* 编号显示与撤回前进栏 */
+        .id-and-undo-row {
             display: flex;
-            gap: 10px;
-            justify-content: center;
             align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
             width: 100%;
+            max-width: 500px;
         }
 
-        /* --- 按钮样式 --- */
+        .puzzle-id {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffd369;
+            letter-spacing: 1px;
+            min-width: 140px;
+            text-align: center;
+        }
+
+        /* 通用按钮样式 */
         .btn {
             background-color: #0f3460;
             color: white;
@@ -111,16 +133,8 @@
             justify-content: center;
         }
 
-        .btn:hover {
-            background-color: var(--cell-hover);
-        }
-
-        .btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
-
+        .btn:hover { background-color: var(--cell-hover); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
         .btn.active {
             background-color: var(--accent-color);
             border-color: var(--accent-color);
@@ -135,13 +149,7 @@
         }
         .start-btn:hover { background-color: #00cc6a; }
 
-        .icon-btn {
-            font-size: 18px;
-            padding: 8px 14px;
-            line-height: 1;
-        }
-
-        /* --- 游戏盘面 --- */
+        /* 盘面 */
         .game-area {
             width: min(95vw, 500px, 55vh);
             aspect-ratio: 1 / 1;
@@ -203,7 +211,6 @@
             z-index: 2;
         }
 
-        /* 有效/无效状态反馈 */
         .cell.valid-border {
             border-color: var(--success-color) !important;
             box-shadow: 0 0 15px var(--success-color) !important;
@@ -233,79 +240,55 @@
             transform: scale(0.3);
         }
 
-        /* --- 规则弹窗 --- */
+        /* 规则弹窗 */
         .modal-overlay {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.8);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            padding: 20px;
-            box-sizing: border-box;
+            justify-content: center; align-items: center;
+            z-index: 1000; padding: 20px; box-sizing: border-box;
         }
 
         .modal-content {
             background-color: var(--grid-bg);
-            padding: 30px;
-            border-radius: 12px;
-            max-width: 500px;
-            width: 100%;
+            padding: 30px; border-radius: 12px;
+            max-width: 500px; width: 100%;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
             border: 1px solid var(--cell-border);
-            position: relative;
-            max-height: 80vh;
-            overflow-y: auto;
+            position: relative; max-height: 80vh; overflow-y: auto;
         }
 
-        .modal-content h2 {
-            margin-top: 0;
-            color: var(--accent-color);
-            text-align: center;
-            font-size: 22px;
-        }
-
-        .modal-content p {
-            line-height: 1.6;
-            font-size: 15px;
-            color: #ccc;
-            margin-bottom: 12px;
-        }
-
+        .modal-content h2 { margin-top: 0; color: var(--accent-color); text-align: center; }
+        .modal-content p { line-height: 1.6; font-size: 15px; color: #ccc; margin-bottom: 12px; }
         .modal-content strong { color: #ffd369; }
-        .modal-content .color-green { color: var(--success-color); font-weight: bold; }
-        .modal-content .color-red { color: var(--danger-color); font-weight: bold; }
+        .color-green { color: var(--success-color); font-weight: bold; }
+        .color-red { color: var(--danger-color); font-weight: bold; }
 
         .close-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: none;
-            border: none;
-            color: #888;
-            font-size: 24px;
-            cursor: pointer;
+            position: absolute; top: 15px; right: 15px;
+            background: none; border: none; color: #888;
+            font-size: 24px; cursor: pointer;
         }
-
         .close-btn:hover { color: white; }
     </style>
 </head>
 <body>
 
-    <!-- 标题与规则图标 -->
+    <!-- 1. 标题与规则 -->
     <div class="header-row">
         <h1 class="title">公约数列</h1>
         <button class="rule-btn" id="rule-btn">?</button>
     </div>
 
-    <!-- 时间 -->
-    <div class="timer-row">作答时间: <span id="timer">00:00</span></div>
+    <!-- 2. 开始 / 指定编号 / 重置盘面 -->
+    <div class="action-row-1">
+        <button id="start-btn" class="btn start-btn">开始游戏</button>
+        <button id="specify-seed-btn" class="btn">指定编号</button>
+        <button id="reset-board-btn" class="btn" disabled>重置盘面</button>
+    </div>
 
-    <!-- 尺寸切换 -->
+    <!-- 3. 尺寸切换 -->
     <div class="size-row" id="size-controls">
         <button class="btn size-btn" data-size="6">6x6</button>
         <button class="btn size-btn" data-size="7">7x7</button>
@@ -314,12 +297,14 @@
         <button class="btn size-btn" data-size="10">10x10</button>
     </div>
 
-    <!-- 操作按钮组 -->
-    <div class="action-row">
-        <button id="start-btn" class="btn start-btn">开始游戏</button>
-        <button id="reset-board-btn" class="btn" disabled>↺ 重置</button>
-        <button id="undo-btn" class="btn icon-btn" disabled>↶</button>
-        <button id="redo-btn" class="btn icon-btn" disabled>↷</button>
+    <!-- 4. 作答时间 -->
+    <div class="timer-row">作答时间: <span id="timer">00:00</span></div>
+
+    <!-- 5. 撤回 / 编号显示 / 前进 -->
+    <div class="id-and-undo-row">
+        <button id="undo-btn" class="btn" disabled>撤回</button>
+        <div class="puzzle-id">题目编号: <span id="puzzle-id-val">------</span></div>
+        <button id="redo-btn" class="btn" disabled>前进</button>
     </div>
 
     <!-- 盘面 -->
@@ -335,15 +320,16 @@
             <h2>游戏规则</h2>
             <p>1. 选择两个数字，将这两个数字分别除以它们的<strong>最大公约数</strong>。</p>
             <p>2. 如果商为 <strong>1</strong>，则该数字被消除；如果商大于1，则该数字将更新为商并保留。</p>
-            <p>3. <strong>连通性限制：</strong>选择的两个数字之间，必须存在一条仅经过<strong>盘面内空白区域</strong>（即已消除格子的纯空白通路）。连线<strong>不能走到盘面外</strong>，不限拐弯次数。</p>
-            <p>4. <strong>消除条件与颜色提示：</strong>只有当两数字<strong>连通</strong>且<strong>最大公约数大于1</strong>时才算有效消除。有效时连线和格子外框显示 <span class="color-green">绿色</span>；若无法连通或最大公约数为1，则显示 <span class="color-red">红色</span> 且操作无效。</p>
-            <p>5. 消除盘面上所有的数字即可获得胜利！(注：本游戏已通过深度质因数奇偶校验，保证所有质因子成对存在，绝不会出现死局！)</p>
+            <p>3. <strong>连通性限制：</strong>选择的两个数字之间，必须存在一条仅经过<strong>盘面内空白区域</strong>（即已消除格子的纯空白通路）。连线<strong>不能走到盘面外，且最多只能拐2个弯</strong>。</p>
+            <p>4. <strong>颜色提示：</strong>当两数字连通且最大公约数>1时，连线和外框显示 <span class="color-green">绿色</span>；若无法连通/拐弯超标/公约数为1，则显示 <span class="color-red">红色</span> 且无效。</p>
+            <p>5. 消除盘面上所有的数字即可获得胜利！(注：本游戏采用 <strong>镜像质因子平衡技术</strong>，保证全局因子绝对偶数，绝无落单死局。)</p>
         </div>
     </div>
 
     <script>
         // --- 游戏状态变量 ---
         let currentSize = 8;
+        let currentSeed = '';
         let board = [];       
         let gridState = [];   
         let selectedCells = [];
@@ -351,12 +337,10 @@
         let isGameOver = false;
         let isProcessing = false; 
         
-        // 历史记录与重做栈
         let initialBoard = []; 
         let historyStack = []; 
         let redoStack = [];    
         
-        // 计时器
         let timerInterval = null;
         let seconds = 0;
 
@@ -366,6 +350,7 @@
         const ctx = canvasEl.getContext('2d');
         const timerEl = document.getElementById('timer');
         const startBtn = document.getElementById('start-btn');
+        const specifySeedBtn = document.getElementById('specify-seed-btn');
         const resetBoardBtn = document.getElementById('reset-board-btn');
         const undoBtn = document.getElementById('undo-btn');
         const redoBtn = document.getElementById('redo-btn');
@@ -373,122 +358,173 @@
         const ruleBtn = document.getElementById('rule-btn');
         const ruleModal = document.getElementById('rule-modal');
         const closeRuleBtn = document.getElementById('close-rule');
+        const puzzleIdVal = document.getElementById('puzzle-id-val');
 
+        // --- 伪随机数引擎 ---
+        let seedState = 0;
+        function srand(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = (hash << 5) - hash + str.charCodeAt(i);
+                hash |= 0; 
+            }
+            seedState = hash;
+        }
+        
+        function random() {
+            seedState = (seedState * 1664525 + 1013904223) % 4294967296;
+            if (seedState < 0) seedState += 4294967296;
+            return seedState / 4294967296;
+        }
+        
+        function randomInt(min, max) { 
+            return Math.floor(random() * (max - min)) + min; 
+        }
+        
+        function shuffle(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = randomInt(0, i + 1);
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+        }
+
+        function generateRandomSeed() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let seed = '';
+            for (let i = 0; i < 6; i++) {
+                seed += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return seed;
+        }
+
+        // --- 核心工具 ---
+        function gcd(a, b) {
+            while (b !== 0) { let temp = b; b = a % b; a = temp; }
+            return a;
+        }
+
+        // --- 字体自适应 ---
         const resizeObserver = new ResizeObserver(() => {
             resizeCanvas();
             updateGridFontSize();
         });
         resizeObserver.observe(document.querySelector('.game-area'));
 
-        // --- 核心工具函数 ---
-        function gcd(a, b) {
-            while (b !== 0) {
-                let temp = b;
-                b = a % b;
-                a = temp;
-            }
-            return a;
-        }
-
-        function isPrime(num) {
-            if (num <= 1) return false;
-            for (let i = 2; i <= Math.sqrt(num); i++) {
-                if (num % i === 0) return false;
-            }
-            return true;
-        }
-
-        function shuffle(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
+        function resizeCanvas() {
+            if (canvasEl.clientWidth && canvasEl.clientHeight) {
+                canvasEl.width = canvasEl.clientWidth;
+                canvasEl.height = canvasEl.clientHeight;
             }
         }
 
-        // --- 高阶：100%保证无死局的盘面生成算法 ---
-        function generateSolvableBoard(size) {
-            const N = size * size;
-            let list = [];
+        function updateGridFontSize() {
+            if (!board.length || !gridEl.clientWidth) return;
+            const style = window.getComputedStyle(gridEl);
+            const padding = parseFloat(style.paddingLeft);
+            const gap = parseFloat(style.gap || 0);
             
-            // 1. 初始生成，保证基本多样性，并严格限制在 2~99 之间
-            // 加入大质数对 (53, 97 等)
-            const largePrimes = [53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
-            shuffle(largePrimes);
-            list.push(largePrimes[0], largePrimes[0]);
-            list.push(largePrimes[1], largePrimes[1]);
+            const availableWidth = gridEl.clientWidth - padding * 2 - gap * (currentSize - 1);
+            const cellSize = availableWidth / currentSize;
+            const fontSize = Math.max(8, cellSize * 0.45); 
             
-            // 加入中质数倍数对 (如 17 和 85， 19 和 57)
-            const mediumPrimes = [11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47];
-            shuffle(mediumPrimes);
-            let mp = mediumPrimes[0];
-            let mult = Math.floor(Math.random() * 2) + 2; // 2 或 3
-            list.push(mp, mp * mult);
+            document.querySelectorAll('.cell').forEach(el => {
+                el.style.fontSize = `${fontSize}px`;
+            });
+        }
+
+        // --- 寻路算法 (最多两折) ---
+        function findPath(r1, c1, r2, c2) {
+            if (r1 === r2 && c1 === c2) return null;
             
-            // 填充剩余位置为随机数 2-99
-            while (list.length < N) {
-                list.push(Math.floor(Math.random() * 98) + 2);
-            }
+            const queue = [{ r: r1, c: c1, dir: -1, turns: 0, path: [[r1, c1]] }];
+            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]]; 
             
-            // 2. 深度质因数奇偶校验修复 (核心防死局逻辑)
-            let iterations = 0;
-            while (iterations < 500) {
-                iterations++;
-                let counts = {};
-                // 统计整个盘面所有质数因子的出现次数（计算指数）
-                for (let v of list) {
-                    let temp = v;
-                    for (let i = 2; i <= temp; i++) {
-                        if (temp % i === 0) {
-                            while (temp % i === 0) {
-                                counts[i] = (counts[i] || 0) + 1;
-                                temp /= i;
-                            }
+            const minTurns = Array(currentSize).fill(0).map(() => 
+                Array(currentSize).fill(0).map(() => Array(4).fill(Infinity))
+            );
+
+            while (queue.length > 0) {
+                const curr = queue.shift();
+                
+                for (let d = 0; d < 4; d++) {
+                    const nr = curr.r + dirs[d][0];
+                    const nc = curr.c + dirs[d][1];
+                    
+                    if (nr < 0 || nr >= currentSize || nc < 0 || nc >= currentSize) continue;
+                    
+                    let nextTurns = curr.turns;
+                    if (curr.dir !== -1 && curr.dir !== d) nextTurns++;
+                    
+                    if (nextTurns > 2) continue;
+                    
+                    if (nr === r2 && nc === c2) {
+                        return [...curr.path, [nr, nc]];
+                    }
+                    
+                    if (gridState[nr][nc] === 0) {
+                        if (minTurns[nr][nc][d] > nextTurns) {
+                            minTurns[nr][nc][d] = nextTurns;
+                            queue.push({ r: nr, c: nc, dir: d, turns: nextTurns, path: [...curr.path, [nr, nc]] });
                         }
                     }
                 }
+            }
+            return null;
+        }
+
+        // --- 完美镜像成对生成法 (100%偶数质因子, 秒生成) ---
+        function generateSolvableBoard(size) {
+            const N = size * size;
+            let list = [];
+            let pairsCount = 0;
+            const targetPairs = N / 2;
+            
+            const largePrimes = [53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
+            const mediumPrimes = [11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47];
+            
+            // 我们每次添加的“元素块”必定保证质因数总数为偶数
+            while (pairsCount < targetPairs) {
+                let r = random();
+                let remain = targetPairs - pairsCount;
                 
-                // 找出所有出现次数为奇数的质数
-                let oddPrimes = [];
-                for (let p in counts) {
-                    if (counts[p] % 2 !== 0) {
-                        oddPrimes.push(parseInt(p));
-                    }
-                }
-                
-                // 如果没有奇数质数，说明完美平衡，退出循环
-                if (oddPrimes.length === 0) break;
-                
-                // 取出一个奇数质数修复
-                let p = oddPrimes[0];
-                
-                // 策略A：尝试寻找一个元素乘以 p 之后，不超过 99，且最好不会引入新的大质数
-                let candidates = [];
-                for (let i = 0; i < N; i++) {
-                    if (list[i] * p <= 99) {
-                        candidates.push(i);
-                    }
-                }
-                
-                if (candidates.length > 0) {
-                    // 找到了，随机选一个乘上去。
-                    // 这会使得 p 的总数+1变为偶数。虽然可能会让该元素的其他因子变奇数，但下一轮循环会继续修复它！
-                    let idx = candidates[Math.floor(Math.random() * candidates.length)];
-                    list[idx] *= p;
+                if (r < 0.3 && remain >= 1) {
+                    // 块A: 大质数对 [p, p] (占一对)
+                    let p = largePrimes[randomInt(0, largePrimes.length)];
+                    list.push(p, p);
+                    pairsCount++;
+                } else if (r < 0.6 && remain >= 2) {
+                    // 块B: 中质数倍数 [p, p*m] 两份 (占两对)
+                    let p = mediumPrimes[randomInt(0, mediumPrimes.length)];
+                    let m = randomInt(2, 4);
+                    let v2 = p * m > 99 ? p * 2 : p * m;
+                    list.push(p, v2);
+                    list.push(p, v2);
+                    pairsCount += 2;
+                } else if (r < 0.8 && remain >= 2) {
+                    // 块C: 合数公约数 [a, b] 两份 (占两对)
+                    let base = randomInt(2, 10);
+                    let m1 = randomInt(2, Math.floor(99/base));
+                    let m2 = randomInt(2, Math.floor(99/base));
+                    let a = base * m1;
+                    let b = base * m2;
+                    list.push(a, b);
+                    list.push(a, b);
+                    pairsCount += 2;
+                } else if (remain >= 1) {
+                    // 块D: 小数字对 [x, x]
+                    let x = [2, 3, 4, 6, 8, 9, 12][randomInt(0, 7)];
+                    list.push(x, x);
+                    pairsCount++;
                 } else {
-                    // 策略B：如果所有数乘 p 都会越界 (说明 p 很大，比如 53)
-                    // 随便找一个合数，直接把它替换成 p，强行增加一个 p 来凑成偶数。
-                    // 这种操作可能会破坏原有的偶数，但下一轮循环会像多米诺骨牌一样修正它。
-                    let idx = Math.floor(Math.random() * N);
-                    // 尽量挑不是质数的格子替换，免得把已经配对的质数打乱
-                    for (let i = 0; i < N; i++) {
-                        if (!isPrime(list[i])) { idx = i; break; }
-                    }
-                    list[idx] = p;
+                    list.push(2, 2);
+                    pairsCount++;
                 }
             }
             
-            // 3. 打乱并转二维
+            // 打乱
             shuffle(list);
+            
+            // 转二维
             const result = [];
             for (let r = 0; r < size; r++) {
                 const row = [];
@@ -497,6 +533,23 @@
                 }
                 result.push(row);
             }
+            
+            // --- 强制开局首对必连通 ---
+            // 查找全盘，找一个能和 result[0][0] 消除的数字，把它换到 (0,1) 位置
+            let val00 = result[0][0];
+            let found = false;
+            for (let r = 0; r < size && !found; r++) {
+                for (let c = 0; c < size && !found; c++) {
+                    if (r === 0 && c === 0) continue;
+                    if (gcd(val00, result[r][c]) > 1) {
+                        let temp = result[0][1];
+                        result[0][1] = result[r][c];
+                        result[r][c] = temp;
+                        found = true;
+                    }
+                }
+            }
+            
             return result;
         }
 
@@ -519,31 +572,24 @@
             }, 1000);
         }
 
-        function stopTimer() {
-            clearInterval(timerInterval);
-        }
+        function stopTimer() { clearInterval(timerInterval); }
 
-        // --- 自适应与渲染 ---
-        function resizeCanvas() {
-            if (canvasEl.clientWidth && canvasEl.clientHeight) {
-                canvasEl.width = canvasEl.clientWidth;
-                canvasEl.height = canvasEl.clientHeight;
-            }
-        }
-
-        function updateGridFontSize() {
-            if (!board.length) return;
-            const cellEl = gridEl.querySelector('.cell');
-            if (!cellEl) return;
-            const rect = cellEl.getBoundingClientRect();
-            const fontSize = Math.max(10, Math.min(rect.width, rect.height) * 0.4);
-            document.querySelectorAll('.cell').forEach(el => el.style.fontSize = `${fontSize}px`);
-        }
-
+        // --- 状态与渲染 ---
         function updateButtonStates() {
             undoBtn.disabled = historyStack.length <= 1;
             redoBtn.disabled = redoStack.length === 0;
             resetBoardBtn.disabled = !isPlaying;
+        }
+
+        function updateGridState() {
+            gridState = [];
+            for (let i = 0; i < currentSize; i++) {
+                let row = [];
+                for (let j = 0; j < currentSize; j++) {
+                    row.push(board[i][j] !== null ? board[i][j] : 0);
+                }
+                gridState.push(row);
+            }
         }
 
         function renderBoard() {
@@ -566,18 +612,6 @@
             updateGridFontSize();
         }
 
-        function updateGridState() {
-            gridState = [];
-            for (let i = 0; i < currentSize; i++) {
-                let row = [];
-                for (let j = 0; j < currentSize; j++) {
-                    row.push(board[i][j] !== null ? board[i][j] : 0);
-                }
-                gridState.push(row);
-            }
-        }
-
-        // --- 历史记录管理 ---
         function saveHistory() {
             historyStack.push(JSON.parse(JSON.stringify(board)));
             redoStack = []; 
@@ -619,17 +653,25 @@
             startBtn.style.backgroundColor = 'var(--success-color)';
             startBtn.style.color = '#000';
             
+            puzzleIdVal.textContent = '------';
             updateButtonStates();
         }
 
-        function startGame() {
-            if (isPlaying) {
-                resetGame();
-            }
+        function startGame(seedStr = null) {
+            if (isPlaying) resetGame();
             
             isPlaying = true;
             isGameOver = false;
             selectedCells = [];
+            
+            let seed = seedStr;
+            if (!seed) {
+                seed = generateRandomSeed();
+            }
+            currentSeed = seed;
+            puzzleIdVal.textContent = seed;
+            
+            srand(seed);
             
             // 生成数据
             board = generateSolvableBoard(currentSize);
@@ -642,10 +684,9 @@
 
             for (let r = 0; r < currentSize; r++) {
                 for (let c = 0; c < currentSize; c++) {
-                    let val = board[r][c];
                     let cell = document.createElement('div');
                     cell.className = 'cell';
-                    cell.textContent = val;
+                    cell.textContent = board[r][c];
                     cell.dataset.r = r;
                     cell.dataset.c = c;
                     cell.addEventListener('click', () => handleCellClick(r, c, cell));
@@ -666,34 +707,7 @@
             updateButtonStates();
         }
 
-        // --- 寻路算法（纯内部连通 BFS） ---
-        function findPath(r1, c1, r2, c2) {
-            const queue = [{ r: r1, c: c1, path: [[r1, c1]] }];
-            const visited = Array(currentSize).fill(0).map(() => Array(currentSize).fill(false));
-            visited[r1][c1] = true;
-            const dirs = [[-1,0], [1,0], [0,-1], [0,1]];
-
-            while (queue.length > 0) {
-                const curr = queue.shift();
-                for (let [dr, dc] of dirs) {
-                    const nr = curr.r + dr, nc = curr.c + dc;
-                    
-                    if (nr < 0 || nr >= currentSize || nc < 0 || nc >= currentSize) continue;
-                    if (visited[nr][nc]) continue;
-                    
-                    if (nr === r2 && nc === c2) {
-                        return [...curr.path, [nr, nc]];
-                    }
-                    
-                    if (gridState[nr][nc] === 0) {
-                        visited[nr][nc] = true;
-                        queue.push({ r: nr, c: nc, path: [...curr.path, [nr, nc]] });
-                    }
-                }
-            }
-            return null;
-        }
-
+        // --- 简化路径绘制 ---
         function simplifyPath(path) {
             if (path.length <= 2) return path;
             const result = [path[0]];
@@ -702,9 +716,7 @@
                 const dr = path[i][0] - path[i-1][0];
                 const dc = path[i][1] - path[i-1][1];
                 const dir = `${dr},${dc}`;
-                if (lastDir !== null && dir !== lastDir) {
-                    result.push(path[i-1]);
-                }
+                if (lastDir !== null && dir !== lastDir) result.push(path[i-1]);
                 lastDir = dir;
             }
             result.push(path[path.length - 1]);
@@ -722,13 +734,12 @@
             const offsetX = gridRect.left - canvasRect.left;
             const offsetY = gridRect.top - canvasRect.top;
             
-            const cellEl = gridEl.querySelector('.cell');
-            if (!cellEl) return;
             const style = window.getComputedStyle(gridEl);
-            const gap = parseFloat(style.gap);
-            const cellWidth = cellEl.offsetWidth;
-            const cellHeight = cellEl.offsetHeight;
+            const gap = parseFloat(style.gap || 0);
             const padding = parseFloat(style.paddingLeft);
+            
+            const cellWidth = (gridEl.clientWidth - padding * 2 - gap * (currentSize - 1)) / currentSize;
+            const cellHeight = (gridEl.clientHeight - padding * 2 - gap * (currentSize - 1)) / currentSize;
             
             const getPixelPos = (r, c) => {
                 const x = offsetX + padding + c * (cellWidth + gap) + cellWidth / 2;
@@ -752,12 +763,10 @@
             }
             ctx.stroke();
 
-            setTimeout(() => {
-                ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
-            }, 400);
+            setTimeout(() => { ctx.clearRect(0, 0, canvasEl.width, canvasEl.height); }, 400);
         }
 
-        // --- 点击交互与核心消除逻辑 ---
+        // --- 核心点击事件 ---
         function handleCellClick(r, c, cellElement) {
             if (!isPlaying || isGameOver || isProcessing) return;
             if (cellElement.classList.contains('eliminated')) return;
@@ -778,11 +787,8 @@
                 
                 const path = findPath(cell1.r, cell1.c, cell2.r, cell2.c);
                 const commonDivisor = gcd(cell1.value, cell2.value);
-                
-                // 只有连通，且最大公约数大于 1 才有效
                 const isValidOperation = (path !== null) && (commonDivisor > 1);
 
-                // --- 无效操作 ---
                 if (!isValidOperation) {
                     drawLineAnimation([[cell1.r, cell1.c], [cell2.r, cell2.c]], false);
                     cell1.element.classList.remove('selected');
@@ -800,14 +806,12 @@
                     return;
                 }
 
-                // --- 有效操作 ---
                 drawLineAnimation(path, true);
                 cell1.element.classList.remove('selected');
                 cell2.element.classList.remove('selected');
                 cell1.element.classList.add('valid-border');
                 cell2.element.classList.add('valid-border');
                 isProcessing = true;
-
                 saveHistory();
 
                 setTimeout(() => {
@@ -842,9 +846,7 @@
                     updateGridState();
                     updateGridFontSize();
 
-                    if (eliminatedAny) {
-                        checkWin();
-                    }
+                    if (eliminatedAny) checkWin();
                     isProcessing = false;
                 }, 300);
             }
@@ -854,10 +856,7 @@
             let allEmpty = true;
             for (let r = 0; r < currentSize; r++) {
                 for (let c = 0; c < currentSize; c++) {
-                    if (board[r][c] !== null) {
-                        allEmpty = false;
-                        break;
-                    }
+                    if (board[r][c] !== null) { allEmpty = false; break; }
                 }
                 if (!allEmpty) break;
             }
@@ -872,7 +871,7 @@
             }
         }
 
-        // --- 事件绑定 ---
+        // --- 按钮事件 ---
         sizeBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 if (isPlaying && !confirm('切换尺寸将结束当前对局，确定吗？')) return;
@@ -883,7 +882,19 @@
             });
         });
 
-        startBtn.addEventListener('click', startGame);
+        startBtn.addEventListener('click', () => startGame());
+
+        specifySeedBtn.addEventListener('click', () => {
+            let seed = prompt('请输入6位题目编号（字母和数字组合）：');
+            if (seed === null) return;
+            seed = seed.trim().toUpperCase();
+            
+            if (seed.length !== 6 || !/^[A-Z0-9]{6}$/.test(seed)) {
+                alert('编号格式错误！必须是由6位字母或数字组成。');
+                return;
+            }
+            startGame(seed);
+        });
 
         resetBoardBtn.addEventListener('click', () => {
             if (!isPlaying) return;
@@ -904,9 +915,7 @@
 
         ruleBtn.addEventListener('click', () => ruleModal.style.display = 'flex');
         closeRuleBtn.addEventListener('click', () => ruleModal.style.display = 'none');
-        ruleModal.addEventListener('click', (e) => {
-            if (e.target === ruleModal) ruleModal.style.display = 'none';
-        });
+        ruleModal.addEventListener('click', (e) => { if (e.target === ruleModal) ruleModal.style.display = 'none'; });
 
         resetGame();
 
