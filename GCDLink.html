@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>公约数列</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --grid-bg: #16213e;
+            --cell-bg: #1e1e3a;
+            --cell-border: #4a4a8a;
+            --cell-hover: #2a2a5a;
+            --accent-color: #e94560;
+            --text-color: #ffffff;
+            --success-color: #00ff88;
+            --danger-color: #ff3333;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        /* 布局容器 */
+        .header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: min(95vw, 500px);
+            margin: 10px auto 15px auto;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            margin: 0;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+            text-align: center;
+            flex-grow: 1;
+        }
+
+        /* 顶部图标按钮 */
+        .icon-btn {
+            font-size: 18px;
+            font-weight: bold;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            background-color: #0f3460;
+            border: 1px solid var(--cell-border);
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .icon-btn:hover { background-color: var(--cell-hover); transform: scale(1.05); }
+        
+        .bulb-btn.active {
+            background-color: #ffd369;
+            border-color: #ffd369;
+            color: #000;
+            box-shadow: 0 0 15px rgba(255, 211, 105, 0.6);
+        }
+
+        .rule-btn {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 10px rgba(233, 69, 96, 0.4);
+        }
+
+        .timer-row {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffd369;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .size-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            width: 100%;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        /* 动作按钮样式 */
+        .btn {
+            background-color: #0f3460;
+            color: white;
+            border: 1px solid var(--cell-border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn:hover:not(:disabled) { background-color: var(--cell-hover); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        .btn.active {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
+        }
+        
+        .start-btn { background-color: var(--success-color); color: #000; border: none; font-size: 15px; }
+        .start-btn:hover { background-color: #00cc6a !important; }
+        
+        .icon-action-btn { font-size: 18px; padding: 8px 14px; line-height: 1; }
+
+        /* 盘面容器 */
+        .game-area {
+            width: min(95vw, 500px, 55vh);
+            aspect-ratio: 1 / 1;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .grid-container {
+            display: grid;
+            gap: min(1.5vw, 8px);
+            background-color: var(--grid-bg);
+            padding: min(2vw, 12px);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #line-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+            border-radius: 12px;
+        }
+
+        .cell {
+            background-color: var(--cell-bg);
+            border: 2px solid var(--cell-border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease, opacity 0.3s ease, transform 0.3s ease;
+            position: relative;
+            color: #e0e0e0;
+        }
+
+        .cell:hover:not(.eliminated):not(.demo-disabled) {
+            background-color: var(--cell-hover);
+            transform: scale(1.05);
+        }
+
+        .cell.selected {
+            border-color: #ffd369;
+            box-shadow: 0 0 12px #ffd369;
+            background-color: rgba(255, 211, 105, 0.2);
+            transform: scale(1.05);
+            z-index: 2;
+        }
+
+        /* 有效/无效状态反馈 */
+        .cell.valid-border {
+            border-color: var(--success-color) !important;
+            box-shadow: 0 0 15px var(--success-color) !important;
+            background-color: rgba(0, 255, 136, 0.2) !important;
+        }
+
+        .cell.invalid-border {
+            border-color: var(--danger-color) !important;
+            box-shadow: 0 0 15px var(--danger-color) !important;
+            background-color: rgba(255, 51, 51, 0.2) !important;
+            animation: shake 0.3s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
+        }
+
+        .cell.eliminated {
+            opacity: 0;
+            pointer-events: none;
+            border-color: transparent;
+            background-color: transparent;
+            transform: scale(0.3);
+        }
+
+        /* 演示模式提示 */
+        .demo-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.3s;
+            border: 1px solid #ffd369;
+        }
+        .demo-hint.show { opacity: 1; }
+
+        /* 规则弹窗 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .modal-content {
+            background-color: var(--grid-bg);
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--cell-border);
+            position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h2 { margin-top: 0; color: var(--accent-color); text-align: center; }
+        .modal-content p { line-height: 1.6; font-size: 15px; color: #ccc; margin-bottom: 12px; }
+        .modal-content strong { color: #ffd369; }
+        .color-green { color: var(--success-color); font-weight: bold; }
+        .color-red { color: var(--danger-color); font-weight: bold; }
+        
+        .close-btn {
+            position: absolute; top: 15px; right: 15px;
+            background: none; border: none; color: #888; font-size: 24px; cursor: pointer;
+        }
+        .close-btn:hover { color: white; }
+    </style>
+</head>
+<body>
+
+    <!-- 顶部对称布局 -->
+    <div class="header-row">
+        <button class="icon-btn bulb-btn" id="demo-btn" title="查看演示/退出演示">💡</button>
+        <h1 class="title">公约数列</h1>
+        <button class="icon-btn rule-btn" id="rule-btn" title="游戏规则">?</button>
+    </div>
+
+    <div class="timer-row">作答时间: <span id="timer">00:00</span></div>
+
+    <div class="size-row" id="size-controls">
+        <button class="btn size-btn" data-size="6">6x6</button>
+        <button class="btn size-btn" data-size="7">7x7</button>
+        <button class="btn size-btn active" data-size="8">8x8</button>
+        <button class="btn size-btn" data-size="9">9x9</button>
+        <button class="btn size-btn" data-size="10">10x10</button>
+    </div>
+
+    <div class="action-row">
+        <button id="start-btn" class="btn start-btn">开始游戏</button>
+        <button id="reset-board-btn" class="btn" disabled>↺ 重置</button>
+        <button id="undo-btn" class="btn icon-action-btn" disabled>↶</button>
+        <button id="redo-btn" class="btn icon-action-btn" disabled>↷</button>
+    </div>
+
+    <!-- 盘面区域 -->
+    <div class="game-area" id="game-area">
+        <div class="grid-container" id="grid"></div>
+        <canvas id="line-canvas"></canvas>
+        <div class="demo-hint" id="demo-hint">单击：前进一步 | 双击：后退一步</div>
+    </div>
+
+    <!-- 规则弹窗 -->
+    <div class="modal-overlay" id="rule-modal">
+        <div class="modal-content">
+            <button class="close-btn" id="close-rule">&times;</button>
+            <h2>游戏规则</h2>
+            <p>1. 选择两个数字，将这两个数字分别除以它们的<strong>最大公约数</strong>。</p>
+            <p>2. 如果商为 <strong>1</strong>，则该数字被消除；如果商大于1，则该数字将更新为商并保留。</p>
+            <p>3. <strong>连通性限制：</strong>选择的两个数字之间，必须存在一条仅经过<strong>盘面内空白区域</strong>（即已消除格子的纯空白通路）。连线<strong>不能走到盘面外</strong>，不限拐弯次数。</p>
+            <p>4. <strong>消除条件与颜色提示：</strong>只有当两数字<strong>连通</strong>且<strong>最大公约数大于1</strong>时才算有效消除。有效时连线和格子外框显示 <span class="color-green">绿色</span>；若无法连通或最大公约数为1，则显示 <span class="color-red">红色</span> 且操作无效。</p>
+            <p>5. 消除盘面上所有的数字即可获得胜利！(注：本游戏已通过特殊算法，保证每一局必定有解！)</p>
+        </div>
+    </div>
+
+    <script>
+        // ================= 游戏核心状态 =================
+        let currentSize = 8;
+        let board = [];       
+        let gridState = [];   
+        let selectedCells = [];
+        
+        let isPlaying = false;
+        let isGameOver = false;
+        let isProcessing = false; // 全局动画锁
+        
+        // 玩家进度栈
+        let initialBoard = []; 
+        let historyStack = []; 
+        let redoStack = [];    
+        
+        // 计时器
+        let timerInterval = null;
+        let seconds = 0;
+
+        // 演示模式状态
+        let isDemoMode = false;
+        let demoBoard = [];            // 演示用盘面
+        let solutionSteps = [];        // 求解步数
+        let currentDemoStep = 0;       // 当前演示步数
+        
+        // 演示模式保存的玩家快照
+        let savedPlayerBoard = [];
+        let savedPlayerHistory = [];
+        let savedPlayerRedo = [];
+        let savedPlayerSeconds = 0;
+
+        // 单击/双击判定
+        let clickTimer = null;
+
+        // ================= DOM 元素 =================
+        const gameArea = document.getElementById('game-area');
+        const gridEl = document.getElementById('grid');
+        const canvasEl = document.getElementById('line-canvas');
+        const ctx = canvasEl.getContext('2d');
+        const timerEl = document.getElementById('timer');
+        const startBtn = document.getElementById('start-btn');
+        const resetBoardBtn = document.getElementById('reset-board-btn');
+        const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
+        const sizeBtns = document.querySelectorAll('.size-btn');
+        const ruleBtn = document.getElementById('rule-btn');
+        const ruleModal = document.getElementById('rule-modal');
+        const closeRuleBtn = document.getElementById('close-rule');
+        const demoBtn = document.getElementById('demo-btn');
+        const demoHint = document.getElementById('demo-hint');
+
+        // 自适应
+        const resizeObserver = new ResizeObserver(() => {
+            resizeCanvas();
+            updateGridFontSize();
+        });
+        resizeObserver.observe(gameArea);
+
+        // ================= 基础工具 =================
+        function gcd(a, b) {
+            while (b !== 0) { let temp = b; b = a % b; a = temp; }
+            return a;
+        }
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function resizeCanvas() {
+            if (canvasEl.clientWidth && canvasEl.clientHeight) {
+                canvasEl.width = canvasEl.clientWidth;
+                canvasEl.height = canvasEl.clientHeight;
+            }
+        }
+        function updateGridFontSize() {
+            if (!board.length) return;
+            const cellEl = gridEl.querySelector('.cell');
+            if (!cellEl) return;
+            const rect = cellEl.getBoundingClientRect();
+            const fontSize = Math.max(10, Math.min(rect.width, rect.height) * 0.4);
+            document.querySelectorAll('.cell').forEach(el => el.style.fontSize = `${fontSize}px`);
+        }
+
+        // ================= 盘面生成算法 =================
+        function generateSolvableBoard(size) {
+            const N = size * size;
+            let list = [];
+            for (let i = 0; i < N; i++) list.push(Math.floor(Math.random() * 99) + 2);
+            
+            let indices = Array.from({length: N}, (_, i) => i);
+            shuffle(indices);
+            let idx = 0;
+            
+            // 注入大质数对
+            const largePrimes = [53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
+            let lp = largePrimes[Math.floor(Math.random() * largePrimes.length)];
+            list[indices[idx++]] = lp; list[indices[idx++]] = lp;
+            
+            // 注入质数及倍数
+            const mediumPrimes = [11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47];
+            let mp = mediumPrimes[Math.floor(Math.random() * mediumPrimes.length)];
+            list[indices[idx++]] = mp; list[indices[idx++]] = mp * Math.floor(Math.random() * 4 + 2);
+            
+            // 注入同数合数对
+            list[indices[idx++]] = 36; list[indices[idx++]] = 36;
+            
+            // 润滑剂
+            const lubricants = [2, 3, 4, 6, 8, 9, 12, 16, 18, 24];
+            const remIndices = Array.from({length: N}, (_, i) => i);
+            shuffle(remIndices);
+            for (let i = 0; i < Math.floor(N * 0.2); i++) {
+                list[remIndices[i]] = lubricants[Math.floor(Math.random() * lubricants.length)];
+            }
+            
+            shuffle(list);
+            const result = [];
+            for (let r = 0; r < size; r++) {
+                const row = [];
+                for (let c = 0; c < size; c++) row.push(list[r * size + c]);
+                result.push(row);
+            }
+            return result;
+        }
+
+        // ================= 求解器（自动演示功能） =================
+        // 仅检查是否连通（纯盘内 BFS）
+        function canConnect(b, r1, c1, r2, c2, size) {
+            if (r1 === r2 && c1 === c2) return false;
+            const queue = [[r1, c1]];
+            const visited = Array(size).fill(0).map(() => Array(size).fill(false));
+            visited[r1][c1] = true;
+            const dirs = [[-1,0], [1,0], [0,-1], [0,1]];
+            
+            while (queue.length > 0) {
+                const [r, c] = queue.shift();
+                for (let [dr, dc] of dirs) {
+                    const nr = r + dr, nc = c + dc;
+                    if (nr < 0 || nr >= size || nc < 0 || nc >= size) continue;
+                    if (visited[nr][nc]) continue;
+                    if (nr === r2 && nc === c2) return true;
+                    if (b[nr][nc] === null) {
+                        visited[nr][nc] = true;
+                        queue.push([nr, nc]);
+                    }
+                }
+            }
+            return false;
+        }
+
+        // 贪心求解
+        function solveBoard(startBoard, size) {
+            let b = JSON.parse(JSON.stringify(startBoard));
+            let steps = [];
+            let maxLoops = size * size * 4;
+            
+            while (maxLoops-- > 0) {
+                let isEmpty = true;
+                for (let r = 0; r < size; r++) {
+                    for (let c = 0; c < size; c++) {
+                        if (b[r][c] !== null) { isEmpty = false; break; }
+                    }
+                    if (!isEmpty) break;
+                }
+                if (isEmpty) return steps; // 求解成功
+
+                // 收集当前所有合法操作
+                let moves = [];
+                for (let r1 = 0; r1 < size; r1++) {
+                    for (let c1 = 0; c1 < size; c1++) {
+                        if (b[r1][c1] === null) continue;
+                        for (let r2 = r1; r2 < size; r2++) {
+                            for (let c2 = (r2 === r1 ? c1 + 1 : 0); c2 < size; c2++) {
+                                if (b[r2][c2] === null) continue;
+                                if (canConnect(b, r1, c1, r2, c2, size)) {
+                                    let g = gcd(b[r1][c1], b[r2][c2]);
+                                    if (g > 1) {
+                                        let nv1 = b[r1][c1] / g;
+                                        let nv2 = b[r2][c2] / g;
+                                        let score = g;
+                                        if (nv1 === 1) score += 15;
+                                        if (nv2 === 1) score += 15;
+                                        moves.push({ r1, c1, r2, c2, g, nv1, nv2, score });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (moves.length === 0) return null; // 死局
+
+                // 按得分排序，加入轻微随机性
+                moves.sort((a, b) => b.score - a.score);
+                let topMoves = moves.filter(m => m.score >= moves[0].score - 2);
+                let best = topMoves[Math.floor(Math.random() * topMoves.length)];
+
+                steps.push({
+                    r1: best.r1, c1: best.c1, r2: best.r2, c2: best.c2,
+                    val1: b[best.r1][best.c1], val2: b[best.r2][best.c2],
+                    nextVal1: best.nv1 === 1 ? null : best.nv1,
+                    nextVal2: best.nv2 === 1 ? null : best.nv2
+                });
+
+                b[best.r1][best.c1] = best.nv1 === 1 ? null : best.nv1;
+                b[best.r2][best.c2] = best.nv2 === 1 ? null : best.nv2;
+            }
+            return null;
+        }
+
+        // 循环尝试求解（防止单次贪心陷入死胡同）
+        function findSolution() {
+            for (let i = 0; i < 15; i++) {
+                const sol = solveBoard(initialBoard, currentSize);
+                if (sol) return sol;
+            }
+            return null;
+        }
+
+        // ================= 计时器 =================
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60).toString().padStart(2, '0');
+            const s = (sec % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+        function startTimer() {
+            clearInterval(timerInterval);
+            seconds = 0;
+            timerEl.textContent = formatTime(seconds);
+            timerInterval = setInterval(() => {
+                if (!isGameOver && isPlaying && !isDemoMode) {
+                    seconds++;
+                    timerEl.textContent = formatTime(seconds);
+                }
+            }, 1000);
+        }
+        function stopTimer() { clearInterval(timerInterval); }
+
+        // ================= 渲染逻辑 =================
+        function updateGridState() {
+            gridState = [];
+            for (let i = 0; i < currentSize; i++) {
+                let row = [];
+                for (let j = 0; j < currentSize; j++) {
+                    row.push(board[i][j] !== null ? board[i][j] : 0);
+                }
+                gridState.push(row);
+            }
+        }
+
+        function renderBoard() {
+            for (let r = 0; r < currentSize; r++) {
+                for (let c = 0; c < currentSize; c++) {
+                    const cell = gridEl.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+                    if (!cell) continue;
+                    const val = board[r][c];
+                    if (val === null) {
+                        cell.textContent = '';
+                        cell.classList.add('eliminated');
+                    } else {
+                        cell.textContent = val;
+                        cell.classList.remove('eliminated');
+                    }
+                    cell.classList.remove('selected', 'valid-border', 'invalid-border');
+                }
+            }
+            updateGridState();
+            updateGridFontSize();
+        }
+
+        function updateButtonStates() {
+            undoBtn.disabled = historyStack.length <= 1 || isDemoMode;
+            redoBtn.disabled = redoStack.length === 0 || isDemoMode;
+            resetBoardBtn.disabled = !isPlaying || isDemoMode;
+            
+            // 演示模式下禁用部分按钮
+            startBtn.disabled = isDemoMode;
+            sizeBtns.forEach(b => b.disabled = isDemoMode);
+        }
+
+        // ================= 玩家操作栈管理 =================
+        function saveHistory() {
+            historyStack.push(JSON.parse(JSON.stringify(board)));
+            redoStack = [];
+            updateButtonStates();
+        }
+
+        // ================= 游戏初始化 =================
+        function resetGame() {
+            isPlaying = false; isGameOver = false; isProcessing = false;
+            isDemoMode = false;
+            selectedCells = []; board = [];
+            historyStack = []; redoStack = [];
+            
+            demoBtn.classList.remove('active');
+            demoHint.classList.remove('show');
+            stopTimer();
+            timerEl.textContent = '00:00';
+            gridEl.innerHTML = '';
+            ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+            
+            startBtn.textContent = '开始游戏';
+            startBtn.style.backgroundColor = 'var(--success-color)';
+            startBtn.style.color = '#000';
+            updateButtonStates();
+        }
+
+        function startGame() {
+            if (isPlaying) resetGame(); 
+            
+            isPlaying = true; isGameOver = false; selectedCells = [];
+            
+            board = generateSolvableBoard(currentSize);
+            initialBoard = JSON.parse(JSON.stringify(board));
+            historyStack = [JSON.parse(JSON.stringify(board))]; 
+            redoStack = [];
+            
+            gridEl.innerHTML = '';
+            gridEl.style.gridTemplateColumns = `repeat(${currentSize}, 1fr)`;
+
+            for (let r = 0; r < currentSize; r++) {
+                for (let c = 0; c < currentSize; c++) {
+                    let val = board[r][c];
+                    let cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.textContent = val;
+                    cell.dataset.r = r;
+                    cell.dataset.c = c;
+                    cell.addEventListener('click', () => handleCellClick(r, c, cell));
+                    gridEl.appendChild(cell);
+                }
+            }
+
+            updateGridState();
+            setTimeout(() => {
+                resizeCanvas();
+                updateGridFontSize();
+                startTimer();
+            }, 50);
+
+            startBtn.textContent = '新的开始';
+            startBtn.style.backgroundColor = '#ffd369';
+            startBtn.style.color = '#000';
+            updateButtonStates();
+        }
+
+        // ================= 玩家核心交互 =================
+        function findPath(r1, c1, r2, c2) {
+            const queue = [{ r: r1, c: c1, path: [[r1, c1]] }];
+            const visited = Array(currentSize).fill(0).map(() => Array(currentSize).fill(false));
+            visited[r1][c1] = true;
+            const dirs = [[-1,0], [1,0], [0,-1], [0,1]];
+
+            while (queue.length > 0) {
+                const curr = queue.shift();
+                for (let [dr, dc] of dirs) {
+                    const nr = curr.r + dr, nc = curr.c + dc;
+                    if (nr < 0 || nr >= currentSize || nc < 0 || nc >= currentSize) continue;
+                    if (visited[nr][nc]) continue;
+                    if (nr === r2 && nc === c2) return [...curr.path, [nr, nc]];
+                    if (gridState[nr][nc] === 0) {
+                        visited[nr][nc] = true;
+                        queue.push({ r: nr, c: nc, path: [...curr.path, [nr, nc]] });
+                    }
+                }
+            }
+            return null;
+        }
+
+        function simplifyPath(path) {
+            if (path.length <= 2) return path;
+            const result = [path[0]];
+            let lastDir = null;
+            for (let i = 1; i < path.length; i++) {
+                const dr = path[i][0] - path[i-1][0];
+                const dc = path[i][1] - path[i-1][1];
+                const dir = `${dr},${dc}`;
+                if (lastDir !== null && dir !== lastDir) result.push(path[i-1]);
+                lastDir = dir;
+            }
+            result.push(path[path.length - 1]);
+            return result;
+        }
+
+        function drawLineAnimation(rawPath, isValid) {
+            const path = simplifyPath(rawPath);
+            resizeCanvas();
+            ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+            
+            const gridRect = gridEl.getBoundingClientRect();
+            const canvasRect = canvasEl.getBoundingClientRect();
+            const offsetX = gridRect.left - canvasRect.left;
+            const offsetY = gridRect.top - canvasRect.top;
+            
+            const cellEl = gridEl.querySelector('.cell');
+            if (!cellEl) return;
+            const style = window.getComputedStyle(gridEl);
+            const gap = parseFloat(style.gap);
+            const cellWidth = cellEl.offsetWidth;
+            const cellHeight = cellEl.offsetHeight;
+            const padding = parseFloat(style.paddingLeft);
+            
+            const getPixelPos = (r, c) => ({
+                x: offsetX + padding + c * (cellWidth + gap) + cellWidth / 2,
+                y: offsetY + padding + r * (cellHeight + gap) + cellHeight / 2
+            });
+
+            ctx.beginPath();
+            const lineColor = isValid ? '#00ff88' : '#ff3333';
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = 5;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.shadowColor = lineColor;
+            ctx.shadowBlur = 10;
+
+            const p0 = getPixelPos(path[0][0], path[0][1]);
+            ctx.moveTo(p0.x, p0.y);
+            for (let i = 1; i < path.length; i++) {
+                const p = getPixelPos(path[i][0], path[i][1]);
+                ctx.lineTo(p.x, p.y);
+            }
+            ctx.stroke();
+
+            setTimeout(() => ctx.clearRect(0, 0, canvasEl.width, canvasEl.height), 400);
+        }
+
+        function handleCellClick(r, c, cellElement) {
+            if (!isPlaying || isGameOver || isProcessing || isDemoMode) return;
+            if (cellElement.classList.contains('eliminated')) return;
+
+            const existingIndex = selectedCells.findIndex(s => s.r === r && s.c === c);
+            if (existingIndex > -1) {
+                cellElement.classList.remove('selected');
+                selectedCells.splice(existingIndex, 1);
+                return;
+            }
+
+            cellElement.classList.add('selected');
+            selectedCells.push({ r, c, value: board[r][c], element: cellElement });
+
+            if (selectedCells.length === 2) {
+                const cell1 = selectedCells[0];
+                const cell2 = selectedCells[1];
+                
+                const path = findPath(cell1.r, cell1.c, cell2.r, cell2.c);
+                const commonDivisor = gcd(cell1.value, cell2.value);
+                const isValidOperation = (path !== null) && (commonDivisor > 1);
+
+                if (!isValidOperation) {
+                    drawLineAnimation([[cell1.r, cell1.c], [cell2.r, cell2.c]], false);
+                    cell1.element.classList.remove('selected');
+                    cell2.element.classList.remove('selected');
+                    cell1.element.classList.add('invalid-border');
+                    cell2.element.classList.add('invalid-border');
+                    
+                    isProcessing = true;
+                    setTimeout(() => {
+                        cell1.element.classList.remove('invalid-border');
+                        cell2.element.classList.remove('invalid-border');
+                        selectedCells = [];
+                        isProcessing = false;
+                    }, 400);
+                    return;
+                }
+
+                drawLineAnimation(path, true);
+                cell1.element.classList.remove('selected');
+                cell2.element.classList.remove('selected');
+                cell1.element.classList.add('valid-border');
+                cell2.element.classList.add('valid-border');
+                isProcessing = true;
+
+                saveHistory();
+
+                setTimeout(() => {
+                    cell1.element.classList.remove('valid-border');
+                    cell2.element.classList.remove('valid-border');
+
+                    const newVal1 = cell1.value / commonDivisor;
+                    const newVal2 = cell2.value / commonDivisor;
+                    let eliminatedAny = false;
+
+                    if (newVal1 === 1) {
+                        board[cell1.r][cell1.c] = null;
+                        cell1.element.textContent = '';
+                        cell1.element.classList.add('eliminated');
+                        eliminatedAny = true;
+                    } else {
+                        board[cell1.r][cell1.c] = newVal1;
+                        cell1.element.textContent = newVal1;
+                    }
+
+                    if (newVal2 === 1) {
+                        board[cell2.r][cell2.c] = null;
+                        cell2.element.textContent = '';
+                        cell2.element.classList.add('eliminated');
+                        eliminatedAny = true;
+                    } else {
+                        board[cell2.r][cell2.c] = newVal2;
+                        cell2.element.textContent = newVal2;
+                    }
+
+                    selectedCells = [];
+                    updateGridState();
+                    updateGridFontSize();
+
+                    if (eliminatedAny) checkWin();
+                    isProcessing = false;
+                }, 300);
+            }
+        }
+
+        function checkWin() {
+            let allEmpty = true;
+            for (let r = 0; r < currentSize; r++) {
+                for (let c = 0; c < currentSize; c++) {
+                    if (board[r][c] !== null) { allEmpty = false; break; }
+                }
+                if (!allEmpty) break;
+            }
+            if (allEmpty) {
+                isGameOver = true;
+                stopTimer();
+                setTimeout(() => {
+                    alert(`恭喜你！成功消除了所有数字！\n作答时间：${formatTime(seconds)}`);
+                    resetGame();
+                }, 400);
+            }
+        }
+
+        // ================= 演示模式 (Demo) 逻辑 =================
+        
+        // 进入/退出演示模式
+        function toggleDemoMode() {
+            if (!isPlaying) {
+                alert("请先开始游戏！");
+                return;
+            }
+
+            if (!isDemoMode) {
+                // 进入演示
+                const sol = findSolution();
+                if (!sol) {
+                    alert("这局盘面过于复杂，暂未计算出完美解，请重开一局。");
+                    return;
+                }
+
+                // 保存玩家快照
+                savedPlayerBoard = JSON.parse(JSON.stringify(board));
+                savedPlayerHistory = JSON.parse(JSON.stringify(historyStack));
+                savedPlayerRedo = JSON.parse(JSON.stringify(redoStack));
+                savedPlayerSeconds = seconds;
+
+                isDemoMode = true;
+                solutionSteps = sol;
+                currentDemoStep = 0;
+                
+                // 重置为初始盘面进行演示
+                board = JSON.parse(JSON.stringify(initialBoard));
+                renderBoard();
+                
+                demoBtn.classList.add('active');
+                demoHint.classList.add('show');
+                setTimeout(() => demoHint.classList.remove('show'), 3000);
+                updateButtonStates();
+                
+            } else {
+                // 退出演示
+                isDemoMode = false;
+                // 恢复玩家快照
+                board = savedPlayerBoard;
+                historyStack = savedPlayerHistory;
+                redoStack = savedPlayerRedo;
+                seconds = savedPlayerSeconds;
+                timerEl.textContent = formatTime(seconds);
+                
+                renderBoard();
+                demoBtn.classList.remove('active');
+                demoHint.classList.remove('show');
+                updateButtonStates();
+                // 确保动画状态清除
+                ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+                isProcessing = false;
+            }
+        }
+
+        // 演示前进一步
+        function demoStepForward() {
+            if (isProcessing || currentDemoStep >= solutionSteps.length) return;
+            isProcessing = true;
+            
+            const step = solutionSteps[currentDemoStep];
+            
+            // 高亮处理
+            const cell1 = gridEl.querySelector(`.cell[data-r="${step.r1}"][data-c="${step.c1}"]`);
+            const cell2 = gridEl.querySelector(`.cell[data-r="${step.r2}"][data-c="${step.c2}"]`);
+            
+            if (cell1) cell1.classList.add('valid-border');
+            if (cell2) cell2.classList.add('valid-border');
+            
+            // 绘制连线
+            const path = findPath(step.r1, step.c1, step.r2, step.c2);
+            if (path) drawLineAnimation(path, true);
+            
+            setTimeout(() => {
+                if (cell1) {
+                    cell1.classList.remove('valid-border');
+                    if (step.nextVal1 === null) {
+                        board[step.r1][step.c1] = null;
+                        cell1.textContent = '';
+                        cell1.classList.add('eliminated');
+                    } else {
+                        board[step.r1][step.c1] = step.nextVal1;
+                        cell1.textContent = step.nextVal1;
+                    }
+                }
+                
+                if (cell2) {
+                    cell2.classList.remove('valid-border');
+                    if (step.nextVal2 === null) {
+                        board[step.r2][step.c2] = null;
+                        cell2.textContent = '';
+                        cell2.classList.add('eliminated');
+                    } else {
+                        board[step.r2][step.c2] = step.nextVal2;
+                        cell2.textContent = step.nextVal2;
+                    }
+                }
+                
+                updateGridState();
+                currentDemoStep++;
+                isProcessing = false;
+                
+                // 检查演示是否完成
+                if (currentDemoStep >= solutionSteps.length) {
+                    setTimeout(() => {
+                        if (isDemoMode) alert("演示完毕！点击💡退出演示。");
+                    }, 400);
+                }
+            }, 300);
+        }
+
+        // 演示后退一步
+        function demoStepBackward() {
+            if (isProcessing || currentDemoStep <= 0) return;
+            
+            currentDemoStep--;
+            
+            // 直接从头重新计算盘面至当前步数，确保状态完全一致
+            board = JSON.parse(JSON.stringify(initialBoard));
+            for (let i = 0; i < currentDemoStep; i++) {
+                const step = solutionSteps[i];
+                board[step.r1][step.c1] = step.nextVal1;
+                board[step.r2][step.c2] = step.nextVal2;
+            }
+            
+            renderBoard();
+        }
+
+        // 监听游戏区域的单击/双击（专用于演示模式）
+        gameArea.addEventListener('click', (e) => {
+            if (!isDemoMode) return;
+            // 忽略按钮点击
+            if (e.target.closest('button')) return;
+            
+            if (clickTimer) {
+                // 检测到双击
+                clearTimeout(clickTimer);
+                clickTimer = null;
+                demoStepBackward();
+            } else {
+                // 可能是单击，等待 250ms 看是否有后续点击
+                clickTimer = setTimeout(() => {
+                    clickTimer = null;
+                    demoStepForward();
+                }, 250);
+            }
+        });
+
+        // ================= 按钮绑定 =================
+        sizeBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (isPlaying && !confirm('切换尺寸将结束当前对局，确定吗？')) return;
+                sizeBtns.forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentSize = parseInt(e.target.dataset.size);
+                resetGame();
+            });
+        });
+
+        startBtn.addEventListener('click', startGame);
+        demoBtn.addEventListener('click', toggleDemoMode);
+
+        resetBoardBtn.addEventListener('click', () => {
+            if (!isPlaying || isDemoMode) return;
+            board = JSON.parse(JSON.stringify(initialBoard));
+            historyStack = [JSON.parse(JSON.stringify(initialBoard))];
+            redoStack = [];
+            selectedCells = [];
+            isProcessing = false;
+            renderBoard();
+            updateButtonStates();
+            seconds = 0;
+            timerEl.textContent = formatTime(seconds);
+        });
+
+        undoBtn.addEventListener('click', () => {
+            if (historyStack.length <= 1 || isDemoMode) return;
+            redoStack.push(JSON.parse(JSON.stringify(board)));
+            board = historyStack.pop();
+            renderBoard();
+            updateButtonStates();
+        });
+
+        redoBtn.addEventListener('click', () => {
+            if (redoStack.length === 0 || isDemoMode) return;
+            historyStack.push(JSON.parse(JSON.stringify(board)));
+            board = redoStack.pop();
+            renderBoard();
+            updateButtonStates();
+        });
+
+        ruleBtn.addEventListener('click', () => ruleModal.style.display = 'flex');
+        closeRuleBtn.addEventListener('click', () => ruleModal.style.display = 'none');
+        ruleModal.addEventListener('click', (e) => {
+            if (e.target === ruleModal) ruleModal.style.display = 'none';
+        });
+
+        // 启动
+        resetGame();
+
+    </script>
+</body>
+</html>
