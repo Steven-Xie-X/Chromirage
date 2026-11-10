@@ -38,7 +38,7 @@
             overflow: hidden;
         }
 
-        /* 固定按钮 */
+        /* 顶部固定控制按钮 */
         .fixed-btn {
             position: fixed;
             top: 12px;
@@ -56,8 +56,10 @@
             backdrop-filter: blur(4px);
             transition: background 0.2s;
         }
-        .fixed-btn:hover { background: rgba(255, 255, 255, 0.2); }
+        .fixed-btn:hover { background: rgba(255, 255, 255, 0.25); }
         #fullscreen-btn { left: 12px; }
+        #settings-btn { left: 56px; }
+        #help-btn { right: 56px; }
         #lock-btn { right: 12px; }
 
         /* 顶部信息区 */
@@ -146,58 +148,52 @@
         .text-remaining { color: var(--text-remaining); }
         .text-mistake { color: var(--text-mistake); }
 
-        /* --- 全屏模式：极致压缩UI --- */
+        /* --- 全屏模式精简UI --- */
         body.is-fullscreen .top-ui { padding-top: 2px; }
         body.is-fullscreen .game-title,
         body.is-fullscreen .controls { display: none; }
-        body.is-fullscreen .info-bar {
-            font-size: 12px; gap: 15px; margin-bottom: 2px; margin-top: 2px;
-        }
-        body.is-fullscreen .header {
-            font-size: 14px; gap: 15px; padding: 2px 20px; margin-bottom: 2px;
-        }
+        body.is-fullscreen .info-bar { font-size: 12px; gap: 15px; margin-bottom: 2px; margin-top: 2px; }
+        body.is-fullscreen .header { font-size: 14px; gap: 15px; padding: 2px 20px; margin-bottom: 2px; }
         body.is-fullscreen .header span { font-size: 16px; }
-        body.is-fullscreen .game-container {
-            padding: 2px; gap: 1vmin;
-        }
+        body.is-fullscreen .game-container { padding: 2px; gap: 1vmin; }
 
-        /* --- 盘面主体区 --- */
+        /* =========================================================
+           盘面主体区（公共基础样式）
+           ========================================================= */
         .game-container {
             flex: 1;
             display: flex;
             justify-content: center;
             align-items: center;
             width: 100%;
-            min-height: 0; /* 关键，防撑破 */
+            min-height: 0;
             padding: 4px;
             overflow: hidden;
-            gap: 1.5vmin; 
+            gap: 2vmin; 
             transition: all 0.3s;
         }
 
-        /* 单面墙 */
+        /* 单面墙基础属性 */
         .wall {
             background: var(--panel-bg);
             border: 1px solid var(--block-border);
             border-radius: 8px;
             padding: 0.5vmin;
             display: grid;
-            grid-template-columns: repeat(10, minmax(0, 1fr));
-            grid-template-rows: repeat(10, minmax(0, 1fr));
-            gap: 0.5vmin; /* 方块之间的间隙 */
+            gap: 0.5vmin; 
             box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
             box-sizing: border-box;
-            aspect-ratio: 1 / 1;
+            aspect-ratio: 1 / 1; /* 强制绝对正方形 */
             min-width: 0;
             min-height: 0;
+            flex-shrink: 0;
         }
 
         /* 单个魔方块 */
         .block {
             background: var(--block-bg);
-            /* 满足要求：边框加粗到 2px，并改为黑灰色 */
-            border: 4px solid #3b445c; 
-            border-radius: 4px;
+            border: 1px solid #3b445c; 
+            border-radius: 3px;
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             grid-template-rows: repeat(3, minmax(0, 1fr));
@@ -207,50 +203,122 @@
             transition: all 0.1s ease;
             min-width: 0;
             min-height: 0;
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
         }
 
         .block:hover {
-            /* 悬浮时略微发光，但不改变白边 */
-            box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+            border-color: #6b7280;
+            box-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
             z-index: 1;
         }
 
         .block.found {
             border-color: var(--success-glow);
-            box-shadow: 0 0 8px var(--success-glow);
+            box-shadow: 0 0 6px var(--success-glow);
             cursor: default;
             pointer-events: none;
         }
 
-        /* 圆点 - 满足要求：从 95% 缩小至 75%，更加精致 */
+        /* 圆点基础样式 */
         .dot {
-            width: 75%;
-            height: 75%;
             border-radius: 50%;
             margin: auto;
             background-color: var(--dot-off);
             box-sizing: border-box;
-            /* 增加内部高光，让圆点更有质感 */
-            box-shadow: inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px rgba(255,255,255,0.15);
             transition: background-color 0.2s ease;
+            aspect-ratio: 1 / 1;
         }
 
-        /* --- 方向自适应 --- */
-        @media (orientation: portrait) {
-            .game-container { flex-direction: column; }
-            .wall { width: 100%; height: auto; max-height: 48%; }
+        /* 迷你模式专属紧凑样式（公共） */
+        body.is-mini .block {
+            padding: 0px; 
+            gap: 0px;
+            border-radius: 2px;
+        }
+        body.is-mini .dot {
+            width: 90%; 
+            height: 90%;
+            margin: auto;
+            box-shadow: none; 
         }
 
+        /* 放大模式专属圆点样式（公共） */
+        body:not(.is-mini) .dot {
+            width: 75%; 
+            height: 75%;
+            box-shadow: inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px rgba(255,255,255,0.15);
+        }
+
+
+        /* =========================================================
+           横屏专属布局 (Landscape)
+           ========================================================= */
         @media (orientation: landscape) {
-            .game-container { flex-direction: row; }
-            .wall { height: 100%; width: auto; max-width: 49%; }
+            .game-container {
+                flex-direction: row;
+            }
+            /* 横屏下：放大模式（保持不动） */
+            body:not(.is-mini) .wall {
+                height: 100%;
+                width: auto;
+                max-width: 48%;
+            }
+            /* 手机横屏下：迷你模式（保持不动） */
+            body.is-mini .wall {
+                height: 100%;
+                width: auto;
+                max-width: 48%;
+            }
         }
 
-        /* 模态框 */
+        /* 针对桌面端大屏幕的迷你模式专属优化（不影响手机横屏） */
+        @media (orientation: landscape) and (min-width: 1024px) {
+            body.is-mini .wall {
+                height: auto; /* 放弃高度铺满 */
+                width: 25%;   /* 每面墙宽度占 25%，两面共 50% */
+                max-width: 25%;
+                max-height: 100%;
+            }
+        }
+
+
+        /* =========================================================
+           竖屏专属布局 (Portrait)
+           ========================================================= */
+        @media (orientation: portrait) {
+            /* 【竖屏迷你模式】强制左右并排（保持不动） */
+            body.is-mini .game-container {
+                flex-direction: row;
+            }
+            body.is-mini .wall {
+                width: 48%; 
+                height: auto;
+                max-height: 100%; 
+            }
+
+            /* 【竖屏放大模式】强制上下排布，彻底解决重叠 */
+            body:not(.is-mini) .game-container {
+                flex-direction: column;
+                gap: 2vh; /* 上下两墙之间增加间距 */
+            }
+            body:not(.is-mini) .wall {
+                width: 100%;
+                /* 核心修复：最大宽度取 100% 与 45vh 的最小值，确保正方形高度绝不会超出可用空间 */
+                max-width: min(100%, 45vh);
+                height: auto;
+                margin: 0 auto; /* 居中显示 */
+            }
+        }
+
+
+        /* =========================================================
+           以下为各种弹窗、提示框样式
+           ========================================================= */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.7);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -259,99 +327,159 @@
         .modal-overlay.hidden { display: none; }
 
         .modal-content {
-            background: #f8fafc;
-            padding: 20px 30px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 25px 30px;
             border-radius: 12px;
-            color: #1e293b;
+            color: #e2e8f0;
             width: 400px;
             max-width: 90%;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
         }
 
         .modal-content h3 {
-            font-size: 16px;
-            margin-bottom: 15px;
-            font-weight: normal;
-        }
-
-        .modal-content input {
-            width: 100%;
-            padding: 10px;
-            font-size: 16px;
-            border: 2px solid #94a3b8;
-            border-radius: 6px;
+            font-size: 20px;
             margin-bottom: 20px;
-            box-sizing: border-box;
-            outline: none;
-        }
-
-        .modal-content input:focus {
-            border-color: #3b82f6;
-        }
-
-        .modal-buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-
-        .btn-confirm {
-            background: #1e293b;
+            font-weight: bold;
             color: #fff;
-            padding: 8px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
+            text-align: center;
         }
 
-        .btn-cancel {
-            background: #e2e8f0;
-            color: #1e293b;
-            padding: 8px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        /* 提示框 */
-        .toast-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
+        .form-group {
+            margin-bottom: 20px;
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            z-index: 10001;
-            pointer-events: none;
+        }
+
+        .form-group label { font-size: 16px; color: #cbd5e1; }
+
+        .form-group input[type="text"],
+        .form-group input[type="number"] {
+            width: 120px;
+            padding: 8px;
+            font-size: 16px;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            background: #0f172a;
+            color: #fff;
+            outline: none;
+            text-align: center;
+        }
+
+        .form-group input:focus { border-color: #3b82f6; }
+
+        .switch-container { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #3b82f6;
+            transition: .4s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px;
+            left: 3px; bottom: 3px; background-color: white;
+            transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #475569; }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 25px; }
+        .btn-confirm, .btn-cancel {
+            padding: 8px 20px; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 15px; font-weight: bold;
+        }
+        .btn-confirm { background: #3b82f6; color: #fff; }
+        .btn-cancel { background: #475569; color: #fff; }
+
+        .rules-text { line-height: 1.6; font-size: 15px; color: #cbd5e1; max-height: 60vh; overflow-y: auto; padding-right: 10px; }
+        .rules-text ul { padding-left: 20px; margin-top: 10px; }
+        .rules-text li { margin-bottom: 8px; }
+        .rules-text strong { color: #fcd34d; }
+
+        .toast-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 10001; pointer-events: none;
         }
         .toast-overlay.hidden { display: none; }
-
         .toast-content {
-            background: rgba(15, 23, 42, 0.95);
-            color: #fff;
-            padding: 25px 40px;
-            border-radius: 12px;
-            font-size: clamp(16px, 3vh, 24px);
-            font-weight: bold;
-            text-align: center;
-            border: 2px solid var(--success-glow);
-            box-shadow: 0 0 30px rgba(74, 222, 128, 0.3);
-            pointer-events: auto;
-            line-height: 1.5;
+            background: rgba(15, 23, 42, 0.95); color: #fff; padding: 20px 30px;
+            border-radius: 12px; font-size: clamp(16px, 3vh, 24px); font-weight: bold;
+            text-align: center; border: 2px solid var(--success-glow);
+            box-shadow: 0 0 30px rgba(74, 222, 128, 0.3); pointer-events: auto; line-height: 1.5;
         }
     </style>
 </head>
-<body>
+<body class="is-mini"> <!-- 默认开启迷你模式 -->
 
     <div class="fixed-btn" id="fullscreen-btn" title="全屏">⛶</div>
+    <div class="fixed-btn" id="settings-btn" title="设置">⚙</div>
+    <div class="fixed-btn" id="help-btn" title="帮助">?</div>
     <div class="fixed-btn" id="lock-btn" title="锁定界面">🔓</div>
+
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>⚙️ 游戏设置</h3>
+            <div class="form-group">
+                <label>盘面大小 (4-12)</label>
+                <input type="number" id="set-size" min="4" max="12" value="10">
+            </div>
+            <div class="form-group">
+                <label>差异块数 (数量或%)</label>
+                <input type="text" id="set-diff" value="12%">
+            </div>
+            <div class="form-group" style="justify-content: center;">
+                <div class="switch-container">
+                    <span>迷你模式</span>
+                    <label class="switch">
+                        <!-- 默认不勾选，表示处于左侧（迷你模式） -->
+                        <input type="checkbox" id="set-mini">
+                        <span class="slider"></span>
+                    </label>
+                    <span>放大模式</span>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="settings-cancel" class="btn-cancel">取消</button>
+                <button id="settings-confirm" class="btn-confirm">保存并开始</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="help-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>📖 游戏规则与说明</h3>
+            <div class="rules-text">
+                <p><strong>玩法目标：</strong>找出左右两面魔方墙中完全相同的方块位置所隐藏的不同之处。</p>
+                <ul>
+                    <li>每个方块内部是一个 3x3 的小圆点矩阵。</li>
+                    <li>不同之处表现为：<strong>颜色的增减</strong> 或 <strong>颜色的替换</strong>（最多2处）。</li>
+                    <li>点击您认为有差异的方块，点击正确会高亮并锁定；点击错误会增加失误次数。</li>
+                </ul>
+                <p><strong>界面操作：</strong></p>
+                <ul>
+                    <li><strong>左上角 ⛶：</strong> 进入/退出全屏。</li>
+                    <li><strong>左上角 ⚙：</strong> 调整盘面大小、差异数量及切换模式。</li>
+                    <li><strong>右上角 🔓：</strong> 锁定界面，防止误触。</li>
+                </ul>
+            </div>
+            <div class="modal-buttons">
+                <button id="help-close" class="btn-confirm" style="width: 100%;">我知道了</button>
+            </div>
+        </div>
+    </div>
 
     <div id="modal-overlay" class="modal-overlay hidden">
         <div class="modal-content">
-            <h3>请输入题号（1-6位字母和数字）：</h3>
-            <input type="text" id="custom-id-input" maxlength="6" autocomplete="off">
+            <h3>请输入题号</h3>
+            <div class="form-group" style="justify-content: center;">
+                <input type="text" id="custom-id-input" maxlength="6" placeholder="1-6位字母数字" style="width: 100%;">
+            </div>
             <div class="modal-buttons">
-                <button id="modal-confirm" class="btn-confirm">确定</button>
                 <button id="modal-cancel" class="btn-cancel">取消</button>
+                <button id="modal-confirm" class="btn-confirm">确定</button>
             </div>
         </div>
     </div>
@@ -362,17 +490,14 @@
 
     <div class="top-ui">
         <h1 class="game-title">色块寻异</h1>
-
         <div class="controls">
             <button class="btn btn-start" id="start-btn">开始游戏</button>
             <button class="btn btn-custom" id="custom-btn">指定编号</button>
         </div>
-
         <div class="info-bar">
             <div class="timer">计时: <span id="timer-display">00:00</span></div>
             <div class="level-id">题号: <span id="level-id-display">------</span></div>
         </div>
-
         <div class="header">
             <div>找到 <span id="found-count" class="text-found">0</span></div>
             <div>剩余 <span id="remaining-count" class="text-remaining">12</span></div>
@@ -386,16 +511,20 @@
     </div>
 
     <script>
-        const ROWS = 10;
-        const COLS = 10;
-        const DIFF_COUNT = 12;
         const COLORS = [
             '#c0392b', '#d35400', '#d4ac0d', '#27ae60', 
             '#2980b9', '#17a589', '#8e44ad'
         ];
+        
+        let settings = {
+            size: 10,
+            diffInput: '12%',
+            isMini: true 
+        };
 
         let state = {
-            grid: [], found: 0, remaining: DIFF_COUNT, mistakes: 0, isPlaying: false
+            rows: 10, cols: 10, diffCount: 12,
+            grid: [], found: 0, remaining: 12, mistakes: 0, isPlaying: false
         };
 
         let timerInterval, secondsElapsed = 0, minutesElapsed = 0;
@@ -412,6 +541,17 @@
         const timerDisplay = document.getElementById('timer-display');
         const levelIdDisplay = document.getElementById('level-id-display');
         
+        const settingsModal = document.getElementById('settings-modal');
+        const setSizeInput = document.getElementById('set-size');
+        const setDiffInput = document.getElementById('set-diff');
+        const setMiniInput = document.getElementById('set-mini');
+        const settingsConfirm = document.getElementById('settings-confirm');
+        const settingsCancel = document.getElementById('settings-cancel');
+        
+        const helpModal = document.getElementById('help-modal');
+        const helpBtn = document.getElementById('help-btn');
+        const helpClose = document.getElementById('help-close');
+
         const modalOverlay = document.getElementById('modal-overlay');
         const customIdInput = document.getElementById('custom-id-input');
         const modalConfirm = document.getElementById('modal-confirm');
@@ -425,14 +565,18 @@
         const metaViewport = document.querySelector('meta[name="viewport"]');
 
         function init() {
+            applySettingsToGrid();
             leftWall.innerHTML = '';
             rightWall.innerHTML = '';
-            for (let i = 0; i < ROWS * COLS; i++) {
+            for (let i = 0; i < state.rows * state.cols; i++) {
                 leftWall.appendChild(createEmptyBlockElement());
                 rightWall.appendChild(createEmptyBlockElement());
             }
             timerDisplay.textContent = "00:00";
             levelIdDisplay.textContent = "------";
+            foundEl.textContent = "0";
+            remainingEl.textContent = state.diffCount;
+            mistakeEl.textContent = "0";
         }
 
         function createEmptyBlockElement() {
@@ -444,6 +588,21 @@
                 block.appendChild(dot);
             }
             return block;
+        }
+
+        function applySettingsToGrid() {
+            const cols = `repeat(${settings.size}, minmax(0, 1fr))`;
+            const rows = `repeat(${settings.size}, minmax(0, 1fr))`;
+            leftWall.style.gridTemplateColumns = cols;
+            leftWall.style.gridTemplateRows = rows;
+            rightWall.style.gridTemplateColumns = cols;
+            rightWall.style.gridTemplateRows = rows;
+            
+            if (settings.isMini) {
+                document.body.classList.add('is-mini');
+            } else {
+                document.body.classList.remove('is-mini');
+            }
         }
 
         function generateRandomPoints() {
@@ -484,7 +643,6 @@
         }
 
         function stopTimer() { clearInterval(timerInterval); }
-
         function updateTimerDisplay() {
             timerDisplay.textContent = `${minutesElapsed.toString().padStart(2, '0')}:${secondsElapsed.toString().padStart(2, '0')}`;
         }
@@ -493,14 +651,23 @@
             if (!levelId) levelId = generateRandomId();
             levelIdDisplay.textContent = levelId;
             
+            const total = state.rows * state.cols;
+            let calcDiff = settings.diffInput;
+            if (calcDiff.includes('%')) {
+                const percent = parseFloat(calcDiff);
+                state.diffCount = Math.max(1, Math.min(total, Math.round(total * percent / 100)));
+            } else {
+                state.diffCount = Math.max(1, Math.min(total, parseInt(calcDiff) || 12));
+            }
+
             state.found = 0;
-            state.remaining = DIFF_COUNT;
+            state.remaining = state.diffCount;
             state.mistakes = 0;
             state.isPlaying = true;
             updateUI();
 
             state.grid = [];
-            for (let i = 0; i < ROWS * COLS; i++) {
+            for (let i = 0; i < total; i++) {
                 const basePoints = generateRandomPoints();
                 state.grid.push({
                     id: i,
@@ -511,9 +678,9 @@
                 });
             }
 
-            const indices = Array.from({ length: ROWS * COLS }, (_, i) => i);
+            const indices = Array.from({ length: total }, (_, i) => i);
             indices.sort(() => Math.random() - 0.5);
-            const diffIndices = indices.slice(0, DIFF_COUNT);
+            const diffIndices = indices.slice(0, state.diffCount);
 
             diffIndices.forEach(idx => {
                 const block = state.grid[idx];
@@ -532,9 +699,7 @@
                     } else {
                         if (leftColor) {
                             let newColor;
-                            do {
-                                newColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-                            } while (newColor === leftColor);
+                            do { newColor = COLORS[Math.floor(Math.random() * COLORS.length)]; } while (newColor === leftColor);
                             block.right[pIdx].color = newColor;
                         } else {
                             block.right[pIdx].color = COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -568,7 +733,6 @@
                 dot.className = 'dot';
                 if (p.color) {
                     dot.style.backgroundColor = p.color;
-                    dot.style.boxShadow = `inset -1px -1px 2px rgba(0,0,0,0.4), inset 1px 1px 2px rgba(255,255,255,0.3)`; 
                 }
                 block.appendChild(dot);
             });
@@ -614,13 +778,9 @@
         
         function showToast(text, isSuccess = true) {
             toastText.innerHTML = text;
-            if (isSuccess) {
-                toastText.style.borderColor = 'var(--success-glow)';
-                toastText.style.boxShadow = '0 0 30px rgba(74, 222, 128, 0.3)';
-            } else {
-                toastText.style.borderColor = 'var(--text-mistake)';
-                toastText.style.boxShadow = '0 0 30px rgba(248, 113, 113, 0.3)';
-            }
+            toastText.style.borderColor = isSuccess ? 'var(--success-glow)' : 'var(--text-mistake)';
+            toastText.style.boxShadow = isSuccess ? '0 0 30px rgba(74, 222, 128, 0.3)' : '0 0 30px rgba(248, 113, 113, 0.3)';
+            
             toastOverlay.classList.remove('hidden');
             
             if (toastDismissHandler) document.removeEventListener('click', toastDismissHandler);
@@ -638,12 +798,15 @@
         }
 
         startBtn.addEventListener('click', () => startGame());
+        
         customBtn.addEventListener('click', () => {
             customIdInput.value = '';
             modalOverlay.classList.remove('hidden');
             customIdInput.focus();
         });
+        
         modalCancel.addEventListener('click', () => modalOverlay.classList.add('hidden'));
+        
         modalConfirm.addEventListener('click', () => {
             const val = customIdInput.value.trim();
             if (!/^[A-Za-z0-9]{1,6}$/.test(val)) {
@@ -653,16 +816,51 @@
             modalOverlay.classList.add('hidden');
             startGame(val.toUpperCase());
         });
+        
         customIdInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') modalConfirm.click();
         });
 
-        // 全屏逻辑
+        document.getElementById('settings-btn').addEventListener('click', () => {
+            setSizeInput.value = settings.size;
+            setDiffInput.value = settings.diffInput;
+            setMiniInput.checked = !settings.isMini; 
+            settingsModal.classList.remove('hidden');
+        });
+
+        settingsCancel.addEventListener('click', () => settingsModal.classList.add('hidden'));
+
+        settingsConfirm.addEventListener('click', () => {
+            let newSize = parseInt(setSizeInput.value);
+            if (isNaN(newSize) || newSize < 4 || newSize > 12) {
+                showToast('盘面大小必须在 4-12 之间', false);
+                return;
+            }
+
+            let newDiff = setDiffInput.value.trim();
+            if (!newDiff) {
+                showToast('请输入差异块数', false);
+                return;
+            }
+
+            settings.size = newSize;
+            settings.diffInput = newDiff;
+            settings.isMini = !setMiniInput.checked; 
+            
+            settingsModal.classList.add('hidden');
+            
+            state.rows = settings.size;
+            state.cols = settings.size;
+            applySettingsToGrid();
+            startGame();
+        });
+
+        helpBtn.addEventListener('click', () => helpModal.classList.remove('hidden'));
+        helpClose.addEventListener('click', () => helpModal.classList.add('hidden'));
+
         fullscreenBtn.addEventListener('click', () => {
             if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    showToast('全屏失败或不支持', false);
-                });
+                document.documentElement.requestFullscreen().catch(() => showToast('全屏失败或不支持', false));
             } else {
                 document.exitFullscreen();
             }
@@ -672,15 +870,13 @@
             if (document.fullscreenElement) {
                 fullscreenBtn.textContent = '🗗';
                 document.body.classList.add('is-fullscreen');
-                setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 50);
             } else {
                 fullscreenBtn.textContent = '⛶';
                 document.body.classList.remove('is-fullscreen');
-                setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 50);
             }
+            setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 50);
         });
 
-        // 锁定逻辑
         lockBtn.addEventListener('click', () => {
             isLocked = !isLocked;
             lockBtn.textContent = isLocked ? '🔒' : '🔓';
