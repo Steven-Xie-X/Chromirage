@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>闪现记忆</title>
+    <style>
+        :root {
+            --bg-color: #f5f2e9;
+            --text-color: #5c5c5c;
+            --cell-bg: #e8e5d9;
+            --cell-border: #c8c4b7;
+            --black-cell-bg: #333333;
+            --black-cell-stripe: #222222;
+            --selected-color: #a0c4ff;
+            --correct-color: #8ce196;
+            --primary-btn: #e0dcd0;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* 顶部导航栏 */
+        .top-bar {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px 5px 20px;
+        }
+
+        .game-title {
+            margin: 0;
+            font-size: 22px;
+            font-weight: bold;
+            color: #7a7566;
+            letter-spacing: 2px;
+        }
+
+        /* 状态栏（模式 + 错误次数） */
+        .sub-status-bar {
+            font-size: 14px;
+            color: #8c8776;
+            font-weight: 500;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .sub-status-bar span {
+            color: #d9534f;
+        }
+
+        .icon-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* 为角标提供定位参照 */
+        .icon-wrapper {
+            position: relative;
+            display: flex;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            opacity: 0.6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .icon-btn:hover:not(:disabled) {
+            opacity: 1;
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        .icon-btn:disabled {
+            opacity: 0.2;
+            cursor: not-allowed;
+        }
+
+        /* 回放次数角标 */
+        .replay-badge {
+            position: absolute;
+            top: -2px;
+            right: -5px;
+            background-color: #ff6b6b;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 1px 5px;
+            border-radius: 10px;
+            display: none;
+            pointer-events: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* 灯泡点亮状态 */
+        .icon-btn.active {
+            opacity: 1;
+            background-color: #fff3cd;
+            box-shadow: 0 0 10px #ffeeba;
+            filter: drop-shadow(0 0 3px gold);
+        }
+
+        /* 尺寸切换按钮 */
+        .size-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .size-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--cell-border);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .size-btn.active {
+            background-color: #d6d2c4;
+            border-color: #a8a396;
+            font-weight: bold;
+        }
+
+        .size-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 棋盘区域 */
+        .board-wrapper {
+            background-color: #f9f7f0;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        .board {
+            display: grid;
+            gap: 8px;
+        }
+
+        .cell {
+            width: 45px;
+            height: 45px;
+            background-color: var(--cell-bg);
+            border: 2px solid var(--cell-border);
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: background-color 0.1s, border-color 0.1s, box-shadow 0.1s;
+        }
+
+        /* 内部几何图案 */
+        .shape {
+            position: absolute;
+            top: 12%;
+            left: 12%;
+            width: 76%;
+            height: 76%;
+            pointer-events: none;
+            opacity: 0.45;
+            transition: opacity 0.1s;
+        }
+
+        .shape svg {
+            width: 100%;
+            height: 100%;
+            fill: #000000;
+        }
+
+        /* 黑格闪现样式 */
+        .cell.black {
+            background: repeating-linear-gradient(
+                45deg,
+                var(--black-cell-bg),
+                var(--black-cell-bg) 6px,
+                var(--black-cell-stripe) 6px,
+                var(--black-cell-stripe) 12px
+            );
+            border-color: #111;
+        }
+
+        .cell.black .shape {
+            opacity: 0; 
+        }
+
+        /* 挑战模式：玩家选中样式 */
+        .cell.selected {
+            background-color: var(--selected-color);
+            border-color: #7b9fd4;
+        }
+
+        /* 错误闪烁提示 (练习模式) */
+        .cell.error-flash {
+            background-color: #f7a5a5 !important;
+            border-color: #d9534f !important;
+        }
+
+        /* 正确答案高亮 (灯泡提示) */
+        .cell.reveal-highlight {
+            box-shadow: inset 0 0 0 3px #4CAF50;
+        }
+
+        /* 成功后的正确格样式 */
+        .cell.correct {
+            background-color: var(--correct-color);
+            border-color: #6cbf74;
+        }
+        .cell.correct .shape {
+            opacity: 0.2;
+        }
+
+        /* 控制区 */
+        .action-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            min-height: 45px;
+        }
+
+        button.action-btn {
+            padding: 12px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: var(--primary-btn);
+            color: #5c5c5c;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        button.action-btn:hover:not(:disabled) {
+            background-color: #d1cdbf;
+        }
+
+        button.action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #start-btn {
+            background-color: #d8ceb6;
+            color: #5c4d3e;
+        }
+
+        #submit-btn {
+            background-color: #b8d4b8;
+            color: #3b5c3b;
+        }
+
+        /* 隐藏元素的类 */
+        .hidden {
+            display: none !important;
+        }
+
+        /* 状态文字 */
+        .status {
+            font-size: 15px;
+            margin-top: 5px;
+            min-height: 24px;
+            text-align: center;
+            padding: 0 20px;
+            color: #d9534f;
+            font-weight: 500;
+        }
+        .status.success {
+            color: #28a745;
+        }
+
+        /* 弹窗通用 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background-color: var(--bg-color);
+            padding: 25px 30px;
+            border-radius: 12px;
+            width: 360px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .modal-content h3 {
+            margin-top: 0;
+            text-align: center;
+            color: #7a7566;
+            margin-bottom: 20px;
+        }
+
+        .modal-content label {
+            display: block;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid var(--cell-border);
+            border-radius: 4px;
+            background-color: #fff;
+            font-size: 14px;
+        }
+
+        /* 模式拨动开关 */
+        .mode-toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            font-size: 15px;
+            font-weight: bold;
+            color: #999;
+        }
+
+        .mode-label {
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            cursor: pointer;
+        }
+
+        .mode-label.active {
+            color: #333;
+            border-color: #d8ceb6;
+            background-color: #fff;
+        }
+
+        /* 开关主体 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 30px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        input:checked + .slider {
+            background-color: #b8d4b8;
+        }
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+        }
+
+        .modal-actions button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #save-settings {
+            background-color: #d8ceb6;
+            color: #5c4d3e;
+        }
+
+        #close-settings, #close-help {
+            background-color: #e0dcd0;
+            color: #666;
+        }
+
+        .help-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #666;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        
+        .help-text b {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 顶部标题与图标栏 -->
+    <div class="top-bar">
+        <div class="icon-group">
+            <button class="icon-btn" id="settings-btn" title="设置">⚙️</button>
+            <div class="icon-wrapper">
+                <button class="icon-btn" id="replay-btn" title="回放" disabled>🔄</button>
+                <span class="replay-badge" id="replay-badge">0</span>
+            </div>
+        </div>
+        <h1 class="game-title">闪现记忆</h1>
+        <div class="icon-group">
+            <button class="icon-btn" id="reveal-btn" title="显示答案" disabled>💡</button>
+            <button class="icon-btn" id="help-btn" title="游戏规则">❓</button>
+        </div>
+    </div>
+
+    <!-- 当前模式与错误次数 -->
+    <div class="sub-status-bar" id="sub-status">
+        <div id="mode-display">练习模式</div>
+        <div>错误次数: <span id="error-count">0</span></div>
+    </div>
+
+    <!-- 尺寸切换 -->
+    <div class="size-controls" id="size-controls">
+        <button class="size-btn" data-size="6">6x6</button>
+        <button class="size-btn" data-size="7">7x7</button>
+        <button class="size-btn active" data-size="8">8x8</button>
+        <button class="size-btn" data-size="9">9x9</button>
+        <button class="size-btn" data-size="10">10x10</button>
+    </div>
+
+    <!-- 棋盘 -->
+    <div class="board-wrapper">
+        <div class="board" id="board"></div>
+    </div>
+
+    <!-- 底部控制按钮 -->
+    <div class="action-controls">
+        <button class="action-btn" id="start-btn">开始游戏</button>
+        <button class="action-btn hidden" id="clear-btn" disabled>一键清空</button>
+        <button class="action-btn hidden" id="submit-btn" disabled>提交答案</button>
+    </div>
+
+    <!-- 状态显示 -->
+    <div class="status" id="status-text">请点击“开始游戏”</div>
+
+    <!-- 设置弹窗 -->
+    <div class="modal" id="settings-modal">
+        <div class="modal-content">
+            <h3>游戏设置</h3>
+            
+            <!-- 模式切换 -->
+            <div class="mode-toggle-container">
+                <span class="mode-label active" id="label-practice">练习模式</span>
+                <label class="switch">
+                    <input type="checkbox" id="mode-toggle">
+                    <span class="slider"></span>
+                </label>
+                <span class="mode-label" id="label-challenge">挑战模式</span>
+            </div>
+
+            <label>
+                闪现时长 (秒):
+                <input type="number" step="0.05" id="input-flash" value="0.25">
+            </label>
+            <label>
+                列间隔时间 (秒):
+                <input type="number" step="0.05" id="input-interval" value="0.25">
+            </label>
+            <label>
+                总黑点数 (数字/范围/百分比):
+                <input type="text" id="input-count" value="25%">
+            </label>
+            <div class="modal-actions">
+                <button id="close-settings">取消</button>
+                <button id="save-settings">保存并重置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 帮助弹窗 -->
+    <div class="modal" id="help-modal">
+        <div class="modal-content">
+            <h3>游戏规则与操作</h3>
+            <div class="help-text">
+                快门只打开一瞬间。记住出现的黑格，快门结束后在棋盘上复原。<br>
+                重看次数会影响成绩。<br>
+                <b>可以在“设置”中通过拨动开关切换“练习模式”和“挑战模式”。</b><br><br>
+                <b>🎯 模式区别：</b><br>
+                <b>练习模式（默认）</b>：无需提交，点击格子立即核验。点对变绿，点错记1次错误。点出所有黑格即过关。<br>
+                <b>挑战模式</b>：点击格子预选，点完后统一提交。若提交有误，记1次错误，可继续修改再次提交。<br><br>
+                <b>操作说明：</b><br>
+                🔄 <b>回放</b>：作答期间点击可重新观看（累加次数），再次点击可随时取消。成功后复盘不计次数。回放不会清空你当前的作答进度。<br>
+                💡 <b>灯泡</b>：作答期间点击该按钮，会用绿色边框高亮出黑色格子的位置。之后本局常亮表示使用过该按钮。再次点击该按钮会关闭答案显示。<br>
+                ⌫ <b>一键清空</b>：仅挑战模式可用，清除当前选中的所有格子。<br>
+                ✅ <b>提交答案</b>：仅挑战模式可用。<br>
+                ⚙️ <b>设置</b>：调整模式、闪现时间、间隔和黑格数量。
+            </div>
+            <div class="modal-actions" style="justify-content: center;">
+                <button id="close-help">我知道了</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 状态变量 ---
+        let gridSize = 8;
+        let flashDuration = 250;     // 毫秒
+        let columnInterval = 250;    // 毫秒
+        let targetInput = "25%";     
+        
+        let gameMode = 'practice'; // 'practice' | 'challenge'
+        
+        let currentTargets = new Set(); 
+        let userSelections = new Set(); // 挑战模式下的选中集合
+        let foundTargets = new Set();   // 练习模式下已找对的集合
+        let state = 'idle'; // idle | flashing | answering | success
+        
+        let replayCount = 0;
+        let errorCount = 0;
+        let isAnswerRevealed = false; 
+        let isHighlightVisible = false;
+        let cancelReplay = false;
+        
+        let currentSleepTimeout = null;
+        let currentSleepReject = null;
+
+        // --- 几何图形 SVG 库 ---
+        const shapes = [
+            '<circle cx="50" cy="50" r="40" />',
+            '<rect x="15" y="15" width="70" height="70" rx="5" />',
+            '<polygon points="50,10 90,90 10,90" />',
+            '<polygon points="50,5 95,38 78,95 22,95 5,38" />',
+            '<polygon points="50,5 90,28 90,72 50,95 10,72 10,28" />',
+            '<polygon points="50,5 61,40 98,40 68,62 79,95 50,75 21,95 32,62 2,40 39,40" />',
+            '<polygon points="50,10 61,30 85,30 70,50 85,70 61,70 50,90 39,70 15,70 30,50 15,30 39,30" />',
+            '<polygon points="50,10 90,50 50,90 10,50" />',
+            '<polygon points="35,10 65,10 65,35 90,35 90,65 65,65 65,90 35,90 35,65 10,65 10,35 35,35" />',
+            '<path d="M50,85 C50,85 10,60 10,35 C10,15 30,10 50,30 C70,10 90,15 90,35 C90,60 50,85 50,85 Z" />'
+        ];
+
+        // --- DOM 元素 ---
+        const boardEl = document.getElementById('board');
+        const startBtn = document.getElementById('start-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const submitBtn = document.getElementById('submit-btn');
+        const replayBtn = document.getElementById('replay-btn');
+        const revealBtn = document.getElementById('reveal-btn');
+        const statusText = document.getElementById('status-text');
+        const replayBadge = document.getElementById('replay-badge');
+        
+        const modeDisplay = document.getElementById('mode-display');
+        const errorCountDisplay = document.getElementById('error-count');
+        
+        const modeToggle = document.getElementById('mode-toggle');
+        const labelPractice = document.getElementById('label-practice');
+        const labelChallenge = document.getElementById('label-challenge');
+
+        // --- 初始化盘面 ---
+        function initBoard() {
+            boardEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            boardEl.innerHTML = '';
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.r = r;
+                    cell.dataset.c = c;
+                    
+                    const shapeEl = document.createElement('div');
+                    shapeEl.className = 'shape';
+                    const randomShape = shapes[Math.floor(Math.random() * shapes.length)];
+                    const rotation = Math.floor(Math.random() * 360); 
+                    shapeEl.innerHTML = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="transform: rotate(${rotation}deg);">${randomShape}</svg>`;
+                    
+                    cell.appendChild(shapeEl);
+                    cell.addEventListener('click', () => handleCellClick(cell, r, c));
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        // --- 可打断的睡眠函数 ---
+        function sleep(ms) {
+            return new Promise((resolve, reject) => {
+                currentSleepReject = reject;
+                currentSleepTimeout = setTimeout(() => {
+                    currentSleepReject = null;
+                    resolve();
+                }, ms);
+            });
+        }
+
+        function cancelSleep() {
+            if (currentSleepTimeout) {
+                clearTimeout(currentSleepTimeout);
+                if (currentSleepReject) {
+                    currentSleepReject(new Error('cancelled'));
+                    currentSleepReject = null;
+                }
+                currentSleepTimeout = null;
+            }
+        }
+
+        // --- 更新UI文字 ---
+        function updateStatusUI() {
+            modeDisplay.innerText = gameMode === 'practice' ? '练习模式' : '挑战模式';
+            errorCountDisplay.innerText = errorCount;
+            
+            if (gameMode === 'practice') {
+                clearBtn.classList.add('hidden');
+                submitBtn.classList.add('hidden');
+            } else {
+                if (state !== 'success') {
+                    clearBtn.classList.remove('hidden');
+                    submitBtn.classList.remove('hidden');
+                }
+            }
+        }
+
+        function updateReplayBadge() {
+            if (replayCount > 0) {
+                replayBadge.innerText = replayCount;
+                replayBadge.style.display = 'block';
+            } else {
+                replayBadge.style.display = 'none';
+            }
+        }
+
+        // --- 重置视觉状态 (开局/切换设置时用) ---
+        function resetBoardVisuals(clearTargets = false) {
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.classList.remove('black', 'selected', 'correct', 'reveal-highlight', 'error-flash');
+            });
+            userSelections.clear();
+            foundTargets.clear();
+            if (clearTargets) {
+                currentTargets.clear();
+            }
+        }
+
+        // --- 生成目标黑格 ---
+        function generateTargets() {
+            currentTargets.clear();
+            let count = 0;
+            
+            if (targetInput.includes('%')) {
+                let pct = parseFloat(targetInput) / 100;
+                count = Math.round(gridSize * gridSize * pct);
+            } else if (targetInput.includes('-')) {
+                let [min, max] = targetInput.split('-').map(Number);
+                count = Math.floor(Math.random() * (max - min + 1)) + min;
+            } else {
+                count = parseInt(targetInput) || Math.round(gridSize * gridSize * 0.25);
+            }
+            count = Math.min(count, gridSize * gridSize);
+
+            let allCells = [];
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    allCells.push({ r, c });
+                }
+            }
+            
+            for (let i = allCells.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [allCells[i], allCells[j]] = [allCells[j], allCells[i]];
+            }
+
+            for (let i = 0; i < count; i++) {
+                currentTargets.add(`${allCells[i].r}-${allCells[i].c}`);
+            }
+        }
+
+        // --- 播放闪现序列 ---
+        async function playSequence(isReplay = false, returnState = 'answering') {
+            state = 'flashing';
+            cancelReplay = false;
+            
+            startBtn.disabled = true;
+            submitBtn.disabled = true;
+            clearBtn.disabled = true;
+            revealBtn.disabled = true;
+            replayBtn.disabled = !isReplay; 
+            
+            statusText.className = 'status';
+            statusText.innerText = isReplay ? `正在回放...` : '请记住闪现的位置...';
+            
+            try {
+                // 修复：只清理闪现相关的类，不清除 player 已选择的类 (selected / correct)
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('black', 'error-flash', 'reveal-highlight');
+                });
+                
+                for (let c = 0; c < gridSize; c++) {
+                    if (cancelReplay) break;
+                    for (let r = 0; r < gridSize; r++) {
+                        const key = `${r}-${c}`;
+                        if (currentTargets.has(key)) {
+                            const cell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+                            if (cell) cell.classList.add('black');
+                        }
+                    }
+                    await sleep(flashDuration);
+                    document.querySelectorAll('.cell.black').forEach(cell => cell.classList.remove('black'));
+                    if (c < gridSize - 1) {
+                        await sleep(columnInterval);
+                    }
+                }
+            } catch (e) {
+                document.querySelectorAll('.cell.black').forEach(cell => cell.classList.remove('black'));
+            }
+            
+            // 恢复状态并更新UI
+            if (cancelReplay) {
+                state = returnState;
+                if (returnState === 'success') {
+                    submitBtn.disabled = true;
+                    clearBtn.disabled = true;
+                    startBtn.disabled = false;
+                    replayBtn.disabled = false;
+                    statusText.className = 'status success';
+                    statusText.innerText = `恭喜！完全正确！`;
+                } else {
+                    startBtn.disabled = false;
+                    replayBtn.disabled = false;
+                    revealBtn.disabled = false;
+                    updateStatusUI();
+                    if (gameMode === 'challenge') {
+                        submitBtn.disabled = false;
+                        clearBtn.disabled = false;
+                    }
+                    
+                    if (isHighlightVisible) {
+                        document.querySelectorAll('.cell').forEach(cell => {
+                            const key = `${cell.dataset.r}-${cell.dataset.c}`;
+                            if (currentTargets.has(key) && !foundTargets.has(key)) {
+                                cell.classList.add('reveal-highlight');
+                            }
+                        });
+                    }
+                    statusText.innerText = gameMode === 'practice' ? '请直接点击刚才出现过的黑格。' : '请在棋盘上点击刚才出现过的黑格，然后点击“提交答案”。';
+                }
+                return;
+            }
+
+            if (returnState === 'success') {
+                state = 'success';
+                submitBtn.disabled = true;
+                clearBtn.disabled = true;
+                startBtn.disabled = false;
+                replayBtn.disabled = false;
+                statusText.className = 'status success';
+                statusText.innerText = `恭喜！完全正确！`;
+            } else {
+                state = 'answering';
+                startBtn.disabled = false;
+                replayBtn.disabled = false;
+                revealBtn.disabled = false;
+                updateStatusUI();
+                if (gameMode === 'challenge') {
+                    submitBtn.disabled = false;
+                    clearBtn.disabled = false;
+                }
+                
+                if (isHighlightVisible) {
+                    document.querySelectorAll('.cell').forEach(cell => {
+                        const key = `${cell.dataset.r}-${cell.dataset.c}`;
+                        if (currentTargets.has(key) && !foundTargets.has(key)) {
+                            cell.classList.add('reveal-highlight');
+                        }
+                    });
+                }
+                statusText.innerText = gameMode === 'practice' ? '请直接点击刚才出现过的黑格。' : '请在棋盘上点击刚才出现过的黑格，然后点击“提交答案”。';
+            }
+        }
+
+        // --- 开始游戏 ---
+        function startGame() {
+            replayCount = 0;
+            errorCount = 0;
+            updateReplayBadge(); 
+            updateStatusUI();
+            isAnswerRevealed = false;
+            isHighlightVisible = false;
+            
+            resetBoardVisuals(true);
+            
+            revealBtn.classList.remove('active');
+            document.querySelectorAll('.size-btn').forEach(b => b.disabled = true);
+            
+            startBtn.innerText = '新的开始';
+            revealBtn.disabled = false;
+            replayBtn.disabled = false;
+            statusText.className = 'status';
+            
+            generateTargets();
+            playSequence(false, 'answering');
+        }
+
+        // --- 点击格子 ---
+        function handleCellClick(cell, r, c) {
+            if (state !== 'answering') return;
+            const key = `${r}-${c}`;
+
+            if (gameMode === 'practice') {
+                // 练习模式：立即判断
+                if (foundTargets.has(key)) return; // 已经点对了的忽略
+                
+                if (currentTargets.has(key)) {
+                    // 点对
+                    foundTargets.add(key);
+                    cell.classList.remove('reveal-highlight');
+                    cell.classList.add('correct');
+                    
+                    // 检查是否全部找到
+                    if (foundTargets.size === currentTargets.size) {
+                        state = 'success';
+                        submitBtn.disabled = true;
+                        clearBtn.disabled = true;
+                        document.querySelectorAll('.size-btn').forEach(b => b.disabled = false);
+                        
+                        let msg = `恭喜！完全正确！`;
+                        if (replayCount > 0) msg += ` (使用了 ${replayCount} 次回放)`;
+                        if (isAnswerRevealed) msg += ` [已使用提示]`;
+                        msg += ` | 错误次数: ${errorCount}`;
+                        
+                        statusText.className = 'status success';
+                        statusText.innerText = msg;
+                    }
+                } else {
+                    // 点错
+                    errorCount++;
+                    updateStatusUI();
+                    cell.classList.add('error-flash');
+                    setTimeout(() => {
+                        cell.classList.remove('error-flash');
+                    }, 300);
+                }
+            } else {
+                // 挑战模式：切换选中状态
+                if (userSelections.has(key)) {
+                    userSelections.delete(key);
+                    cell.classList.remove('selected');
+                } else {
+                    userSelections.add(key);
+                    cell.classList.add('selected');
+                }
+            }
+        }
+
+        // --- 提交答案 (仅挑战模式) ---
+        function submitAnswer() {
+            if (gameMode !== 'challenge' || state !== 'answering') return;
+            
+            let hasError = false;
+            
+            document.querySelectorAll('.cell').forEach(cell => {
+                const r = cell.dataset.r;
+                const c = cell.dataset.c;
+                const key = `${r}-${c}`;
+                
+                const isTarget = currentTargets.has(key);
+                const isSelected = userSelections.has(key);
+                
+                if (isTarget !== isSelected) {
+                    hasError = true;
+                }
+            });
+            
+            if (!hasError) {
+                state = 'success';
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('selected', 'reveal-highlight');
+                    const key = `${cell.dataset.r}-${cell.dataset.c}`;
+                    if (currentTargets.has(key)) {
+                        cell.classList.add('correct');
+                    }
+                });
+                
+                startBtn.innerText = '新的开始';
+                submitBtn.disabled = true;
+                clearBtn.disabled = true;
+                revealBtn.disabled = true;
+                document.querySelectorAll('.size-btn').forEach(b => b.disabled = false);
+                
+                let msg = `恭喜！完全正确！`;
+                if (replayCount > 0) msg += ` (使用了 ${replayCount} 次回放)`;
+                if (isAnswerRevealed) msg += ` [已使用提示]`;
+                msg += ` | 错误次数: ${errorCount}`;
+                
+                statusText.className = 'status success';
+                statusText.innerText = msg;
+            } else {
+                errorCount++;
+                updateStatusUI();
+                statusText.className = 'status';
+                statusText.innerText = '作答有误，请仔细检查，可继续修改并再次提交。';
+            }
+        }
+
+        // --- 事件绑定 ---
+        startBtn.addEventListener('click', startGame);
+
+        clearBtn.addEventListener('click', () => {
+            if (gameMode !== 'challenge' || state !== 'answering') return;
+            document.querySelectorAll('.cell.selected').forEach(cell => {
+                cell.classList.remove('selected');
+            });
+            userSelections.clear();
+        });
+
+        submitBtn.addEventListener('click', submitAnswer);
+
+        revealBtn.addEventListener('click', () => {
+            if (state !== 'answering') return;
+            
+            if (!isHighlightVisible) {
+                isHighlightVisible = true;
+                isAnswerRevealed = true; 
+                revealBtn.classList.add('active');
+                
+                document.querySelectorAll('.cell').forEach(cell => {
+                    const key = `${cell.dataset.r}-${cell.dataset.c}`;
+                    if (currentTargets.has(key) && !foundTargets.has(key)) {
+                        cell.classList.add('reveal-highlight');
+                    }
+                });
+            } else {
+                isHighlightVisible = false;
+                revealBtn.classList.remove('active');
+                
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('reveal-highlight');
+                });
+            }
+        });
+
+        replayBtn.addEventListener('click', () => {
+            if (state === 'flashing') {
+                cancelReplay = true;
+                cancelSleep();
+            } else if (state === 'answering') {
+                replayCount++;
+                updateReplayBadge(); 
+                // 修复：移除了 resetBoardVisuals(false) ，不再清空作答进度
+                playSequence(true, 'answering');
+            } else if (state === 'success') {
+                // 成功后复盘也不清空
+                playSequence(true, 'success');
+            }
+        });
+
+        // 尺寸切换
+        document.querySelectorAll('.size-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (state === 'flashing') return; 
+                gridSize = parseInt(btn.dataset.size);
+                document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                initBoard();
+                
+                state = 'idle';
+                startBtn.disabled = false;
+                startBtn.innerText = '开始游戏';
+                replayBtn.disabled = true;
+                submitBtn.disabled = true;
+                clearBtn.disabled = true;
+                revealBtn.disabled = true;
+                revealBtn.classList.remove('active');
+                isHighlightVisible = false;
+                resetBoardVisuals(true);
+                
+                statusText.className = 'status';
+                statusText.innerText = `已切换到 ${gridSize}x${gridSize}，点击开始游戏`;
+            });
+        });
+
+        // --- 设置弹窗中的模式拨动开关交互 ---
+        function updateSettingsModeUI() {
+            if (modeToggle.checked) {
+                labelPractice.classList.remove('active');
+                labelChallenge.classList.add('active');
+            } else {
+                labelPractice.classList.add('active');
+                labelChallenge.classList.remove('active');
+            }
+        }
+
+        modeToggle.addEventListener('change', updateSettingsModeUI);
+
+        // 点击文字标签也能切换
+        labelPractice.addEventListener('click', () => {
+            modeToggle.checked = false;
+            updateSettingsModeUI();
+        });
+        labelChallenge.addEventListener('click', () => {
+            modeToggle.checked = true;
+            updateSettingsModeUI();
+        });
+
+        // --- 其他弹窗逻辑 ---
+        document.getElementById('settings-btn').addEventListener('click', () => {
+            document.getElementById('input-flash').value = flashDuration / 1000;
+            document.getElementById('input-interval').value = columnInterval / 1000;
+            document.getElementById('input-count').value = targetInput;
+            
+            // 同步模式开关状态
+            modeToggle.checked = (gameMode === 'challenge');
+            updateSettingsModeUI();
+            
+            document.getElementById('settings-modal').style.display = 'flex';
+        });
+        document.getElementById('close-settings').addEventListener('click', () => {
+            document.getElementById('settings-modal').style.display = 'none';
+        });
+        document.getElementById('save-settings').addEventListener('click', () => {
+            let inputFlashSec = parseFloat(document.getElementById('input-flash').value);
+            flashDuration = isNaN(inputFlashSec) || inputFlashSec <= 0 ? 250 : inputFlashSec * 1000;
+            
+            let inputIntervalSec = parseFloat(document.getElementById('input-interval').value);
+            columnInterval = isNaN(inputIntervalSec) || inputIntervalSec < 0 ? 250 : inputIntervalSec * 1000;
+            
+            targetInput = document.getElementById('input-count').value.trim() || "25%";
+            
+            // 获取模式
+            gameMode = modeToggle.checked ? 'challenge' : 'practice';
+            
+            document.getElementById('settings-modal').style.display = 'none';
+            
+            if (state !== 'flashing') {
+                state = 'idle';
+                errorCount = 0; // 重置错误次数
+                updateStatusUI();
+                
+                startBtn.disabled = false;
+                startBtn.innerText = '开始游戏';
+                replayBtn.disabled = true;
+                submitBtn.disabled = true;
+                clearBtn.disabled = true;
+                revealBtn.disabled = true;
+                revealBtn.classList.remove('active');
+                isHighlightVisible = false;
+                resetBoardVisuals(true);
+                
+                statusText.className = 'status';
+                statusText.innerText = '设置已保存，点击开始游戏';
+            }
+        });
+
+        document.getElementById('help-btn').addEventListener('click', () => {
+            document.getElementById('help-modal').style.display = 'flex';
+        });
+        document.getElementById('close-help').addEventListener('click', () => {
+            document.getElementById('help-modal').style.display = 'none';
+        });
+
+        // 初始化页面
+        initBoard();
+        updateStatusUI();
+    </script>
+</body>
+</html>
