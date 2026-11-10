@@ -252,19 +252,17 @@
 
 
         /* =========================================================
-           横屏专属布局 (Landscape)
+           横屏专属布局 (Landscape) —— 绝不动摇的参数
            ========================================================= */
         @media (orientation: landscape) {
             .game-container {
                 flex-direction: row;
             }
-            /* 横屏下：放大模式（保持不动） */
             body:not(.is-mini) .wall {
                 height: 100%;
                 width: auto;
                 max-width: 48%;
             }
-            /* 手机横屏下：迷你模式（保持不动） */
             body.is-mini .wall {
                 height: 100%;
                 width: auto;
@@ -272,11 +270,11 @@
             }
         }
 
-        /* 针对桌面端大屏幕的迷你模式专属优化（不影响手机横屏） */
+        /* 针对桌面端大屏幕的迷你模式专属优化 */
         @media (orientation: landscape) and (min-width: 1024px) {
             body.is-mini .wall {
-                height: auto; /* 放弃高度铺满 */
-                width: 25%;   /* 每面墙宽度占 25%，两面共 50% */
+                height: auto; 
+                width: 25%;   
                 max-width: 25%;
                 max-height: 100%;
             }
@@ -287,7 +285,7 @@
            竖屏专属布局 (Portrait)
            ========================================================= */
         @media (orientation: portrait) {
-            /* 【竖屏迷你模式】强制左右并排（保持不动） */
+            /* 【竖屏迷你模式】强制左右并排（绝不动摇） */
             body.is-mini .game-container {
                 flex-direction: row;
             }
@@ -297,17 +295,29 @@
                 max-height: 100%; 
             }
 
-            /* 【竖屏放大模式】强制上下排布，彻底解决重叠 */
-            body:not(.is-mini) .game-container {
+            /* 【竖屏放大模式 - 非全屏】完美修复重叠，实现纵向铺满，横向留余地 */
+            body:not(.is-mini):not(.is-fullscreen) .game-container {
                 flex-direction: column;
-                gap: 2vh; /* 上下两墙之间增加间距 */
+                gap: 2vh; /* 两墙间距 */
             }
-            body:not(.is-mini) .wall {
+            body:not(.is-mini):not(.is-fullscreen) .wall {
+                flex: 1;           /* 均分可用高度 */
+                height: 0;         /* 触发flex高度计算 */
+                width: auto;       
+                max-width: 90%;    /* 横向留出余地 */
+                margin: 0 auto;
+            }
+
+            /* 【竖屏放大模式 - 全屏】保持之前的准确参数，完全不动 */
+            body:not(.is-mini).is-fullscreen .game-container {
+                flex-direction: column;
+                gap: 2vh; 
+            }
+            body:not(.is-mini).is-fullscreen .wall {
                 width: 100%;
-                /* 核心修复：最大宽度取 100% 与 45vh 的最小值，确保正方形高度绝不会超出可用空间 */
                 max-width: min(100%, 45vh);
                 height: auto;
-                margin: 0 auto; /* 居中显示 */
+                margin: 0 auto; 
             }
         }
 
@@ -369,12 +379,32 @@
 
         .form-group input:focus { border-color: #3b82f6; }
 
-        .switch-container { display: flex; align-items: center; gap: 10px; font-size: 14px; }
-        .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+        /* --- 拨动开关全新样式 --- */
+        .switch-container { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        
+        .mode-text {
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.3s;
+            color: #64748b;
+            cursor: pointer;
+        }
+        .mode-text.active-mini {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            font-weight: bold;
+        }
+        .mode-text.active-enlarge {
+            background-color: rgba(74, 222, 128, 0.2);
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .switch { position: relative; display: inline-block; width: 46px; height: 24px; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider {
             position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #3b82f6;
+            background-color: #3b82f6; /* 默认蓝色 */
             transition: .4s; border-radius: 24px;
         }
         .slider:before {
@@ -382,7 +412,8 @@
             left: 3px; bottom: 3px; background-color: white;
             transition: .4s; border-radius: 50%;
         }
-        input:checked + .slider { background-color: #475569; }
+        /* 当勾选时，变为绿色 */
+        input:checked + .slider { background-color: #4ade80; }
         input:checked + .slider:before { transform: translateX(22px); }
 
         .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 25px; }
@@ -432,13 +463,12 @@
             </div>
             <div class="form-group" style="justify-content: center;">
                 <div class="switch-container">
-                    <span>迷你模式</span>
+                    <span id="text-mini" class="mode-text">迷你模式</span>
                     <label class="switch">
-                        <!-- 默认不勾选，表示处于左侧（迷你模式） -->
                         <input type="checkbox" id="set-mini">
                         <span class="slider"></span>
                     </label>
-                    <span>放大模式</span>
+                    <span id="text-enlarge" class="mode-text">放大模式</span>
                 </div>
             </div>
             <div class="modal-buttons">
@@ -563,6 +593,27 @@
         const fullscreenBtn = document.getElementById('fullscreen-btn');
         const lockBtn = document.getElementById('lock-btn');
         const metaViewport = document.querySelector('meta[name="viewport"]');
+
+        // --- 设置面板开关文字样式与事件 ---
+        const textMini = document.getElementById('text-mini');
+        const textEnlarge = document.getElementById('text-enlarge');
+
+        function updateModeText() {
+            if (setMiniInput.checked) {
+                // 右侧 放大模式
+                textMini.classList.remove('active-mini');
+                textEnlarge.classList.add('active-enlarge');
+            } else {
+                // 左侧 迷你模式
+                textEnlarge.classList.remove('active-enlarge');
+                textMini.classList.add('active-mini');
+            }
+        }
+
+        setMiniInput.addEventListener('change', updateModeText);
+        textMini.addEventListener('click', () => { setMiniInput.checked = false; updateModeText(); });
+        textEnlarge.addEventListener('click', () => { setMiniInput.checked = true; updateModeText(); });
+
 
         function init() {
             applySettingsToGrid();
@@ -825,6 +876,7 @@
             setSizeInput.value = settings.size;
             setDiffInput.value = settings.diffInput;
             setMiniInput.checked = !settings.isMini; 
+            updateModeText(); // 打开时同步样式
             settingsModal.classList.remove('hidden');
         });
 
