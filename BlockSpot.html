@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <!-- 限制移动端缩放，保证布局稳定 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>色块寻异</title>
+    <style>
+        :root {
+            --bg-color: #0b0e14;
+            --panel-bg: #131724;
+            --block-bg: #1c2135;
+            --block-border: #2a3045;
+            --dot-off: #2c324a;
+            --text-main: #e2e8f0;
+            --text-found: #facc15;
+            --text-remaining: #4ade80;
+            --text-mistake: #f87171;
+            --success-glow: #4ade80;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden; /* 禁止滚动 */
+            padding: 5px;
+        }
+
+        /* 顶部控制区 */
+        .top-ui {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-shrink: 0;
+            margin-bottom: 5px;
+            width: 100%;
+        }
+
+        .game-title {
+            font-size: clamp(20px, 3.5vh, 32px);
+            font-weight: bold;
+            letter-spacing: 4px;
+            margin: 5px 0;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 5px;
+        }
+
+        .btn {
+            padding: 6px 20px;
+            font-size: clamp(14px, 2vh, 18px);
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-start {
+            color: var(--bg-color);
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            box-shadow: 0 4px 10px rgba(74, 222, 128, 0.3);
+        }
+
+        .btn-custom {
+            color: var(--bg-color);
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            box-shadow: 0 4px 10px rgba(96, 165, 250, 0.3);
+        }
+
+        .info-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            font-size: clamp(14px, 2vh, 20px);
+            font-weight: bold;
+            font-family: monospace;
+            margin-bottom: 5px;
+        }
+
+        .timer { color: #93c5fd; }
+        .level-id { color: #fca5a5; }
+
+        .header {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            font-size: clamp(16px, 2.5vh, 22px);
+            font-weight: bold;
+            background: rgba(19, 23, 36, 0.8);
+            padding: 6px 30px;
+            border-radius: 10px;
+            border: 1px solid var(--block-border);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .header span {
+            font-family: monospace;
+            font-size: clamp(18px, 3vh, 26px);
+            margin-left: 5px;
+        }
+
+        .text-found { color: var(--text-found); }
+        .text-remaining { color: var(--text-remaining); }
+        .text-mistake { color: var(--text-mistake); }
+
+        /* 盘面主体区 - 占据剩余所有空间 */
+        .game-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            min-height: 0; /* 关键：允许Flex子元素在内容溢出时收缩 */
+        }
+
+        /* 单面墙 */
+        .wall {
+            background: var(--panel-bg);
+            border: 2px solid var(--block-border);
+            border-radius: 12px;
+            padding: 6px;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(10, 1fr);
+            gap: 3px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+            box-sizing: border-box;
+        }
+
+        /* 横屏（默认左右排布） */
+        @media (orientation: landscape) {
+            .game-container {
+                flex-direction: row;
+            }
+            .wall {
+                height: 100%;
+                aspect-ratio: 1 / 1;
+                max-width: 48%; /* 防止超出宽度 */
+            }
+        }
+
+        /* 竖屏（上下排布） */
+        @media (orientation: portrait) {
+            .game-container {
+                flex-direction: column;
+            }
+            .wall {
+                width: 95%;
+                aspect-ratio: 1 / 1;
+                max-height: 48%; /* 防止超出高度 */
+            }
+        }
+
+        /* 单个魔方块 */
+        .block {
+            background: var(--block-bg);
+            border: 1px solid var(--block-border);
+            border-radius: 4px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            padding: 1px; /* 微小内边距 */
+            gap: 1px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-sizing: border-box;
+        }
+
+        .block:hover {
+            border-color: #6b7280;
+            z-index: 1;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+        }
+
+        .block.found {
+            border-color: var(--success-glow);
+            box-shadow: 0 0 8px var(--success-glow);
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* 圆点 */
+        .dot {
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            margin: auto; /* 居中，避免变形 */
+            background-color: var(--dot-off);
+            transition: background-color 0.2s ease;
+        }
+
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-overlay.hidden { display: none; }
+
+        .modal-content {
+            background: #f8fafc;
+            padding: 20px 30px;
+            border-radius: 12px;
+            color: #1e293b;
+            width: 400px;
+            max-width: 90%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .modal-content h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            font-weight: normal;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #94a3b8;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .modal-content input:focus {
+            border-color: #3b82f6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-confirm {
+            background: #1e293b;
+            color: #fff;
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-cancel {
+            background: #e2e8f0;
+            color: #1e293b;
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        /* 提示框 */
+        .toast-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            pointer-events: none;
+        }
+        .toast-overlay.hidden { display: none; }
+
+        .toast-content {
+            background: rgba(15, 23, 42, 0.95);
+            color: #fff;
+            padding: 25px 40px;
+            border-radius: 12px;
+            font-size: clamp(16px, 3vh, 24px);
+            font-weight: bold;
+            text-align: center;
+            border: 2px solid var(--success-glow);
+            box-shadow: 0 0 30px rgba(74, 222, 128, 0.3);
+            pointer-events: auto;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 模态框 -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>请输入题号（1-6位字母和数字）：</h3>
+            <input type="text" id="custom-id-input" maxlength="6" autocomplete="off">
+            <div class="modal-buttons">
+                <button id="modal-confirm" class="btn-confirm">确定</button>
+                <button id="modal-cancel" class="btn-cancel">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示框 -->
+    <div id="toast-overlay" class="toast-overlay hidden">
+        <div class="toast-content" id="toast-text"></div>
+    </div>
+
+    <div class="top-ui">
+        <h1 class="game-title">色块寻异</h1>
+
+        <div class="controls">
+            <button class="btn btn-start" id="start-btn">开始游戏</button>
+            <button class="btn btn-custom" id="custom-btn">指定编号</button>
+        </div>
+
+        <div class="info-bar">
+            <div class="timer">计时: <span id="timer-display">00:00</span></div>
+            <div class="level-id">题号: <span id="level-id-display">------</span></div>
+        </div>
+
+        <div class="header">
+            <div>找到 <span id="found-count" class="text-found">0</span></div>
+            <div>剩余 <span id="remaining-count" class="text-remaining">12</span></div>
+            <div>失误 <span id="mistake-count" class="text-mistake">0</span></div>
+        </div>
+    </div>
+
+    <!-- 游戏盘面区 -->
+    <div class="game-container" id="game-container">
+        <div class="wall" id="wall-left"></div>
+        <div class="wall" id="wall-right"></div>
+    </div>
+
+    <script>
+        // 游戏配置
+        const ROWS = 10;
+        const COLS = 10;
+        const DIFF_COUNT = 12;
+        // 调整后的暗淡颜色（不刺眼）
+        const COLORS = [
+            '#c0392b', // 暗红
+            '#d35400', // 暗橙
+            '#d4ac0d', // 暗黄
+            '#27ae60', // 暗绿
+            '#2980b9', // 暗蓝
+            '#17a589', // 暗青
+            '#8e44ad'  // 暗紫
+        ];
+
+        // 游戏状态
+        let state = {
+            grid: [],
+            found: 0,
+            remaining: DIFF_COUNT,
+            mistakes: 0,
+            isPlaying: false
+        };
+
+        // 计时器状态
+        let timerInterval;
+        let secondsElapsed = 0;
+        let minutesElapsed = 0;
+        
+        // 提示框状态
+        let toastTimeout;
+        let toastDismissHandler = null;
+
+        // DOM 元素
+        const leftWall = document.getElementById('wall-left');
+        const rightWall = document.getElementById('wall-right');
+        const foundEl = document.getElementById('found-count');
+        const remainingEl = document.getElementById('remaining-count');
+        const mistakeEl = document.getElementById('mistake-count');
+        const startBtn = document.getElementById('start-btn');
+        const customBtn = document.getElementById('custom-btn');
+        const timerDisplay = document.getElementById('timer-display');
+        const levelIdDisplay = document.getElementById('level-id-display');
+        
+        const modalOverlay = document.getElementById('modal-overlay');
+        const customIdInput = document.getElementById('custom-id-input');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalCancel = document.getElementById('modal-cancel');
+        
+        const toastOverlay = document.getElementById('toast-overlay');
+        const toastText = document.getElementById('toast-text');
+
+        // 初始化空盘面
+        function init() {
+            leftWall.innerHTML = '';
+            rightWall.innerHTML = '';
+            for (let i = 0; i < ROWS * COLS; i++) {
+                leftWall.appendChild(createEmptyBlockElement());
+                rightWall.appendChild(createEmptyBlockElement());
+            }
+            timerDisplay.textContent = "00:00";
+            levelIdDisplay.textContent = "------";
+        }
+
+        // 创建空方块
+        function createEmptyBlockElement() {
+            const block = document.createElement('div');
+            block.className = 'block';
+            for (let i = 0; i < 9; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                block.appendChild(dot);
+            }
+            return block;
+        }
+
+        // 生成随机点阵
+        function generateRandomPoints() {
+            const points = [];
+            for (let i = 0; i < 9; i++) {
+                if (Math.random() < 0.75) {
+                    points.push({ color: COLORS[Math.floor(Math.random() * COLORS.length)] });
+                } else {
+                    points.push({ color: null });
+                }
+            }
+            return points;
+        }
+
+        // 生成随机题号
+        function generateRandomId() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            const length = Math.floor(Math.random() * 6) + 1;
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        // 计时器控制
+        function startTimer() {
+            clearInterval(timerInterval);
+            secondsElapsed = 0;
+            minutesElapsed = 0;
+            updateTimerDisplay();
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                if (secondsElapsed >= 60) {
+                    minutesElapsed++;
+                    secondsElapsed = 0;
+                }
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        function updateTimerDisplay() {
+            const minStr = minutesElapsed.toString().padStart(2, '0');
+            const secStr = secondsElapsed.toString().padStart(2, '0');
+            timerDisplay.textContent = `${minStr}:${secStr}`;
+        }
+
+        // 开始游戏
+        function startGame(levelId) {
+            if (!levelId) levelId = generateRandomId();
+            levelIdDisplay.textContent = levelId;
+            
+            state.found = 0;
+            state.remaining = DIFF_COUNT;
+            state.mistakes = 0;
+            state.isPlaying = true;
+            updateUI();
+
+            // 生成基础数据
+            state.grid = [];
+            for (let i = 0; i < ROWS * COLS; i++) {
+                const basePoints = generateRandomPoints();
+                state.grid.push({
+                    id: i,
+                    left: basePoints.map(p => ({ ...p })),
+                    right: basePoints.map(p => ({ ...p })),
+                    isDifferent: false,
+                    found: false
+                });
+            }
+
+            // 随机挑选差异方块
+            const indices = Array.from({ length: ROWS * COLS }, (_, i) => i);
+            indices.sort(() => Math.random() - 0.5);
+            const diffIndices = indices.slice(0, DIFF_COUNT);
+
+            diffIndices.forEach(idx => {
+                const block = state.grid[idx];
+                block.isDifferent = true;
+
+                const numPointsToChange = Math.random() < 0.5 ? 1 : 2;
+                const pointIndices = [0,1,2,3,4,5,6,7,8].sort(() => Math.random() - 0.5).slice(0, numPointsToChange);
+
+                pointIndices.forEach(pIdx => {
+                    const leftColor = block.left[pIdx].color;
+
+                    if (Math.random() < 0.5) {
+                        // 颜色变无色，或无色变颜色
+                        if (leftColor) {
+                            block.right[pIdx].color = null;
+                        } else {
+                            block.right[pIdx].color = COLORS[Math.floor(Math.random() * COLORS.length)];
+                        }
+                    } else {
+                        // 颜色改变
+                        if (leftColor) {
+                            let newColor;
+                            do {
+                                newColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+                            } while (newColor === leftColor);
+                            block.right[pIdx].color = newColor;
+                        } else {
+                            block.right[pIdx].color = COLORS[Math.floor(Math.random() * COLORS.length)];
+                        }
+                    }
+                });
+            });
+
+            renderBoard();
+            startTimer();
+        }
+
+        // 渲染棋盘
+        function renderBoard() {
+            leftWall.innerHTML = '';
+            rightWall.innerHTML = '';
+
+            state.grid.forEach(blockData => {
+                leftWall.appendChild(createBlockElement(blockData, 'left'));
+                rightWall.appendChild(createBlockElement(blockData, 'right'));
+            });
+        }
+
+        // 渲染方块
+        function createBlockElement(blockData, side) {
+            const block = document.createElement('div');
+            block.className = 'block';
+            if (blockData.found) {
+                block.classList.add('found');
+            }
+
+            const points = side === 'left' ? blockData.left : blockData.right;
+            
+            points.forEach(p => {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                if (p.color) {
+                    dot.style.backgroundColor = p.color;
+                    dot.style.boxShadow = `0 0 2px ${p.color}`;
+                }
+                block.appendChild(dot);
+            });
+
+            block.addEventListener('click', () => handleBlockClick(blockData, side, block));
+            return block;
+        }
+
+        // 处理点击
+        function handleBlockClick(blockData, side, blockEl) {
+            if (!state.isPlaying || blockData.found) return;
+
+            if (blockData.isDifferent) {
+                blockData.found = true;
+                state.found++;
+                state.remaining--;
+                
+                blockEl.classList.add('found');
+                const otherSideBlocks = (side === 'left' ? rightWall : leftWall).children;
+                otherSideBlocks[blockData.id].classList.add('found');
+
+                updateUI();
+
+                if (state.remaining === 0) {
+                    state.isPlaying = false;
+                    stopTimer();
+                    showToast(`恭喜找出了所有不同！<br>题号：${levelIdDisplay.textContent}<br>失误：${state.mistakes} 次<br>用时：${timerDisplay.textContent}`, true);
+                }
+            } else {
+                state.mistakes++;
+                updateUI();
+                
+                // 错误抖动动画
+                blockEl.style.transform = 'translateX(2px)';
+                setTimeout(() => blockEl.style.transform = 'translateX(-2px)', 50);
+                setTimeout(() => blockEl.style.transform = 'translateX(2px)', 100);
+                setTimeout(() => blockEl.style.transform = 'translateX(0)', 150);
+            }
+        }
+
+        function updateUI() {
+            foundEl.textContent = state.found;
+            remainingEl.textContent = state.remaining;
+            mistakeEl.textContent = state.mistakes;
+        }
+        
+        // 显示提示框
+        function showToast(text, isSuccess = true) {
+            toastText.innerHTML = text;
+            
+            if (isSuccess) {
+                toastText.style.borderColor = 'var(--success-glow)';
+                toastText.style.boxShadow = '0 0 30px rgba(74, 222, 128, 0.3)';
+            } else {
+                toastText.style.borderColor = 'var(--text-mistake)';
+                toastText.style.boxShadow = '0 0 30px rgba(248, 113, 113, 0.3)';
+            }
+            
+            toastOverlay.classList.remove('hidden');
+            
+            if (toastDismissHandler) {
+                document.removeEventListener('click', toastDismissHandler);
+            }
+            
+            toastDismissHandler = () => {
+                toastOverlay.classList.add('hidden');
+                document.removeEventListener('click', toastDismissHandler);
+                clearTimeout(toastTimeout);
+                toastDismissHandler = null;
+            };
+            
+            setTimeout(() => {
+                document.addEventListener('click', toastDismissHandler);
+            }, 10);
+            
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(toastDismissHandler, 1500);
+        }
+
+        // 事件绑定
+        startBtn.addEventListener('click', () => startGame());
+        
+        customBtn.addEventListener('click', () => {
+            customIdInput.value = '';
+            modalOverlay.classList.remove('hidden');
+            customIdInput.focus();
+        });
+        
+        modalCancel.addEventListener('click', () => {
+            modalOverlay.classList.add('hidden');
+        });
+        
+        modalConfirm.addEventListener('click', () => {
+            const val = customIdInput.value.trim();
+            if (!/^[A-Za-z0-9]{1,6}$/.test(val)) {
+                showToast('题号格式不正确<br>请输入1-6位字母和数字', false);
+                return;
+            }
+            modalOverlay.classList.add('hidden');
+            startGame(val.toUpperCase());
+        });
+        
+        customIdInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') modalConfirm.click();
+        });
+
+        // 启动初始化
+        init();
+    </script>
+</body>
+</html>
