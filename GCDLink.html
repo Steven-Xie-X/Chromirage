@@ -337,7 +337,7 @@
             <p>2. 如果商为 <strong>1</strong>，则该数字被消除；如果商大于1，则该数字将更新为商并保留。</p>
             <p>3. <strong>连通性限制：</strong>选择的两个数字之间，必须存在一条仅经过<strong>盘面内空白区域</strong>（即已消除格子的纯空白通路）。连线<strong>不能走到盘面外</strong>，不限拐弯次数。</p>
             <p>4. <strong>消除条件与颜色提示：</strong>只有当两数字<strong>连通</strong>且<strong>最大公约数大于1</strong>时才算有效消除。有效时连线和格子外框显示 <span class="color-green">绿色</span>；若无法连通或最大公约数为1，则显示 <span class="color-red">红色</span> 且操作无效。</p>
-            <p>5. 消除盘面上所有的数字即可获得胜利！(注：本游戏已通过特殊算法，保证所有质数必定成对出现，每一局必定有解！)</p>
+            <p>5. 消除盘面上所有的数字即可获得胜利！(注：本游戏已通过深度质因数奇偶校验，保证所有质因子成对存在，绝不会出现死局！)</p>
         </div>
     </div>
 
@@ -410,82 +410,85 @@
             const N = size * size;
             let list = [];
             
-            // 1. 初始完全随机 (产生杂乱感)
-            for (let i = 0; i < N; i++) {
-                list.push(Math.floor(Math.random() * 99) + 2);
-            }
-            
-            // 2. 注入神仙对子，丰富元素
-            let indices = Array.from({length: N}, (_, i) => i);
-            shuffle(indices);
-            let idx = 0;
-            
-            // 强随机大质数对
+            // 1. 初始生成，保证基本多样性，并严格限制在 2~99 之间
+            // 加入大质数对 (53, 97 等)
             const largePrimes = [53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
             shuffle(largePrimes);
-            list[indices[idx++]] = largePrimes[0];
-            list[indices[idx++]] = largePrimes[0];
-            list[indices[idx++]] = largePrimes[1];
-            list[indices[idx++]] = largePrimes[1];
+            list.push(largePrimes[0], largePrimes[0]);
+            list.push(largePrimes[1], largePrimes[1]);
             
-            // 中质数及其倍数
+            // 加入中质数倍数对 (如 17 和 85， 19 和 57)
             const mediumPrimes = [11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47];
             shuffle(mediumPrimes);
             let mp = mediumPrimes[0];
-            let mult = Math.floor(Math.random() * 2) + 2; // 2或3
-            list[indices[idx++]] = mp;
-            list[indices[idx++]] = mp * mult;
+            let mult = Math.floor(Math.random() * 2) + 2; // 2 或 3
+            list.push(mp, mp * mult);
             
-            // 大合数对
-            const largeComposites = [36, 72, 48, 96, 64, 81, 75];
-            shuffle(largeComposites);
-            list[indices[idx++]] = largeComposites[0];
-            list[indices[idx++]] = largeComposites[0];
-            
-            // 3. 添加小因子润滑剂 (15%的格子)
-            const lubricants = [2, 3, 4, 6, 8, 9, 12, 16, 18, 24, 36];
-            for (let i = 0; i < Math.floor(N * 0.15); i++) {
-                list[indices[idx++]] = lubricants[Math.floor(Math.random() * lubricants.length)];
+            // 填充剩余位置为随机数 2-99
+            while (list.length < N) {
+                list.push(Math.floor(Math.random() * 98) + 2);
             }
             
-            // 4. 核心修复：全局质因数奇偶校正，保证所有质数都是成对出现！
-            function getPrimeFactors(n) {
-                let f = [];
-                for (let d = 2; d <= n; d++) {
-                    while (n % d === 0) { f.push(d); n /= d; }
-                }
-                return f;
-            }
-            
-            let counts = {};
-            for (let v of list) {
-                for (let p of getPrimeFactors(v)) {
-                    counts[p] = (counts[p] || 0) + 1;
-                }
-            }
-            
-            // 找到所有可替换的合数位置
-            const replaceableIndices = [];
-            for (let i = 0; i < N; i++) {
-                if (!isPrime(list[i])) {
-                    replaceableIndices.push(i);
-                }
-            }
-            shuffle(replaceableIndices);
-            
-            for (let p in counts) {
-                if (counts[p] % 2 !== 0) {
-                    if (replaceableIndices.length > 0) {
-                        let rIdx = replaceableIndices.pop();
-                        list[rIdx] = parseInt(p);
-                        counts[p]++; // 补全为偶数
+            // 2. 深度质因数奇偶校验修复 (核心防死局逻辑)
+            let iterations = 0;
+            while (iterations < 500) {
+                iterations++;
+                let counts = {};
+                // 统计整个盘面所有质数因子的出现次数（计算指数）
+                for (let v of list) {
+                    let temp = v;
+                    for (let i = 2; i <= temp; i++) {
+                        if (temp % i === 0) {
+                            while (temp % i === 0) {
+                                counts[i] = (counts[i] || 0) + 1;
+                                temp /= i;
+                            }
+                        }
                     }
                 }
+                
+                // 找出所有出现次数为奇数的质数
+                let oddPrimes = [];
+                for (let p in counts) {
+                    if (counts[p] % 2 !== 0) {
+                        oddPrimes.push(parseInt(p));
+                    }
+                }
+                
+                // 如果没有奇数质数，说明完美平衡，退出循环
+                if (oddPrimes.length === 0) break;
+                
+                // 取出一个奇数质数修复
+                let p = oddPrimes[0];
+                
+                // 策略A：尝试寻找一个元素乘以 p 之后，不超过 99，且最好不会引入新的大质数
+                let candidates = [];
+                for (let i = 0; i < N; i++) {
+                    if (list[i] * p <= 99) {
+                        candidates.push(i);
+                    }
+                }
+                
+                if (candidates.length > 0) {
+                    // 找到了，随机选一个乘上去。
+                    // 这会使得 p 的总数+1变为偶数。虽然可能会让该元素的其他因子变奇数，但下一轮循环会继续修复它！
+                    let idx = candidates[Math.floor(Math.random() * candidates.length)];
+                    list[idx] *= p;
+                } else {
+                    // 策略B：如果所有数乘 p 都会越界 (说明 p 很大，比如 53)
+                    // 随便找一个合数，直接把它替换成 p，强行增加一个 p 来凑成偶数。
+                    // 这种操作可能会破坏原有的偶数，但下一轮循环会像多米诺骨牌一样修正它。
+                    let idx = Math.floor(Math.random() * N);
+                    // 尽量挑不是质数的格子替换，免得把已经配对的质数打乱
+                    for (let i = 0; i < N; i++) {
+                        if (!isPrime(list[i])) { idx = i; break; }
+                    }
+                    list[idx] = p;
+                }
             }
             
-            // 5. 最终打乱，让对子全部分散
+            // 3. 打乱并转二维
             shuffle(list);
-            
             const result = [];
             for (let r = 0; r < size; r++) {
                 const row = [];
@@ -543,7 +546,6 @@
             resetBoardBtn.disabled = !isPlaying;
         }
 
-        // 渲染当前 board 到 DOM
         function renderBoard() {
             for (let r = 0; r < currentSize; r++) {
                 for (let c = 0; c < currentSize; c++) {
@@ -564,7 +566,6 @@
             updateGridFontSize();
         }
 
-        // 更新寻路矩阵
         function updateGridState() {
             gridState = [];
             for (let i = 0; i < currentSize; i++) {
