@@ -148,7 +148,6 @@
         }
         .progress-text { font-size: 13px; color: #ccc; width: 45px; text-align: right; }
 
-        /* 修改：居中显示 */
         .toggle-container {
             width: 100%;
             max-width: 400px;
@@ -229,7 +228,6 @@
             box-shadow: 0 0 8px rgba(91, 192, 222, 0.4);
         }
 
-        /* 新增：使用CSS完美绘制45度斜线，避免字体显示问题 */
         .line { background: #ccc; border-radius: 2px; transition: all 0.2s; }
         .horiz { width: 16px; height: 2px; }
         .vert { width: 2px; height: 16px; }
@@ -417,7 +415,6 @@
                     <button class="small-icon-btn" id="redo-btn" title="前进" disabled>↪️</button>
                 </div>
                 <div class="axis-controls">
-                    <!-- 修改：使用CSS代替文本符号 -->
                     <div class="axis-btn" id="axis-h" title="锁定横折痕（上下折叠）"><div class="line horiz"></div></div>
                     <div class="axis-btn" id="axis-v" title="锁定竖折痕（左右折叠）"><div class="line vert"></div></div>
                     <div class="axis-btn" id="axis-m" title="锁定主对角折痕（\）"><div class="line diag-m"></div></div>
@@ -630,10 +627,22 @@
             refreshBothBoards();
         });
 
+        // 【修复核心】安全绘制：使用 requestAnimationFrame 并检查容器尺寸，解决移动端跳转黑屏
         function refreshBothBoards() {
-            drawBoard(ctx, currentGrid, showOnlyMatched ? targetGrid : null);
-            drawBoard(tCtx, targetGrid, null);
-            renderGame(); 
+            if (!currentGrid || currentGrid.length === 0) return;
+            
+            requestAnimationFrame(() => {
+                const parentWidth = gameCanvas.parentElement.clientWidth;
+                // 如果父容器在此时尺寸仍为0（在后台或未完成布局），等待重试
+                if (parentWidth === 0) {
+                    setTimeout(refreshBothBoards, 50);
+                    return;
+                }
+                
+                drawBoard(ctx, currentGrid, showOnlyMatched ? targetGrid : null);
+                drawBoard(tCtx, targetGrid, null);
+                renderGame(); 
+            });
         }
 
         function setLockedAxis(axis) {
@@ -1145,7 +1154,6 @@
             return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
         }
 
-        // 修改：优化滑动方向判定逻辑
         function getDragAction(startX, startY, endX, endY) {
             const dx = endX - startX;
             const dy = endY - startY;
@@ -1158,17 +1166,15 @@
                 const absDx = Math.abs(dx);
                 const absDy = Math.abs(dy);
                 
-                // 根据拖动幅度占比进行判定
                 if (absDx > 1.5 * absDy) {
-                    axis = 'V'; // 横向滑动
+                    axis = 'V'; 
                 } else if (absDy > 1.5 * absDx) {
-                    axis = 'H'; // 纵向滑动
+                    axis = 'H'; 
                 } else {
-                    // 斜向滑动（dx 和 dy 幅度接近）
                     if ((dx > 0 && dy > 0) || (dx < 0 && dy < 0)) {
-                        axis = 'M'; // 左上到右下（主对角线）
+                        axis = 'M'; 
                     } else {
-                        axis = 'A'; // 右上到左下（副对角线）
+                        axis = 'A'; 
                     }
                 }
             }
@@ -1489,7 +1495,6 @@
 
         function closeSettings() { settingsPopup.classList.remove('show'); }
 
-        // 修改：应用设置后重置为空白盘面
         function applySettings() {
             let newColors = parseInt(document.getElementById('setting-colors').value);
             let newSize = parseInt(document.getElementById('setting-size').value);
@@ -1513,7 +1518,7 @@
             foldRangeText = newFolds;
 
             closeSettings();
-            initGame(); // 重置为空白盘面，使用新尺寸
+            initGame();
             showToast("设置已应用，请点击开始游戏");
         }
 
@@ -1843,8 +1848,6 @@
             document.getElementById('new-btn-text').innerText = '开始游戏';
             document.getElementById('new-btn-icon').innerText = '▶️';
             
-            // 注意：不在这里强行重置 N 和 colorCount，使用全局最新的设置
-            
             function createBlankGrid() {
                 const grid = [];
                 for (let x = 0; x < N; x++) {
@@ -1884,8 +1887,31 @@
             refreshBothBoards();
         }
 
+        // 【新增】解决跳转和前后台切换导致的移动端黑屏问题
+        window.addEventListener('pageshow', (e) => {
+            if (isGameStarted) {
+                refreshBothBoards();
+            }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                if (isGameStarted) {
+                    refreshBothBoards();
+                }
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (isGameStarted) {
+                refreshBothBoards();
+            }
+        });
+
         // 页面载入时执行初始化
-        initGame();
+        window.addEventListener('load', () => {
+            initGame();
+        });
     </script>
 </body>
 </html>
