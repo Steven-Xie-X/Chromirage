@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>缤纷叠影 - 自定义版</title>
+    <title>缤纷叠影</title>
     <style>
         :root {
             --bg-color: #1a1c2c;
@@ -46,6 +46,11 @@
         }
 
         .top-left-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .top-right-group {
             display: flex;
             gap: 10px;
         }
@@ -93,6 +98,11 @@
         #settings-btn {
             color: #a18cd1;
             border-color: rgba(161, 140, 209, 0.4);
+        }
+
+        #camera-btn {
+            color: #FFD700;
+            border-color: rgba(255, 215, 0, 0.4);
         }
 
         .timer-display {
@@ -330,6 +340,18 @@
         }
         .btn:active { transform: scale(0.95); }
 
+        .small-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ccc;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .small-btn:active { background: rgba(255, 255, 255, 0.1); }
+
         .overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             z-index: 150; display: none; cursor: pointer;
@@ -346,7 +368,7 @@
             border: 2px solid var(--primary-color);
             box-shadow: 0 0 50px rgba(91, 192, 222, 0.4);
             display: flex; flex-direction: column; gap: 15px;
-            max-width: 90%; width: 320px;
+            max-width: 90%; width: 340px;
         }
         .modal.show { transform: translate(-50%, -50%) scale(1); }
         .modal h2 { color: var(--primary-color); font-size: 20px; margin-bottom: 5px; }
@@ -360,6 +382,28 @@
             outline: none;
         }
         .input-group input:focus { border-color: var(--primary-color); }
+
+        .upload-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .upload-box { 
+            flex: 1; aspect-ratio: 1; border: 2px dashed rgba(255,255,255,0.3); 
+            border-radius: 8px; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; cursor: pointer; 
+            position: relative; overflow: hidden; background: rgba(0,0,0,0.2); 
+            transition: all 0.2s; 
+        }
+        .upload-box:hover { border-color: var(--primary-color); background: rgba(91, 192, 222, 0.1); }
+        .upload-box .icon { font-size: 28px; margin-bottom: 5px; }
+        .upload-box .text { font-size: 13px; color: #ccc; }
+        .upload-box input[type="file"] { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+        .upload-box img { display: none; width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 10; }
+        .upload-box img.show { display: block; }
+        
+        .paste-hint { font-size: 12px; color: #aaa; text-align: center; margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; }
+        
+        .input-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .input-row .input-group { flex: 1; min-width: 45%; margin-bottom: 0; }
+        
+        .modal-btns { display: flex; justify-content: space-between; margin-top: 10px; align-items: center; }
 
         .toast {
             position: fixed; bottom: 20%; left: 50%;
@@ -383,7 +427,10 @@
             <div class="icon-btn" id="settings-btn" title="游戏设置">⚙️</div>
         </div>
         <div class="game-title">缤纷叠影</div>
-        <div class="icon-btn" id="hint-btn" title="进入/退出演示模式">💡</div>
+        <div class="top-right-group">
+            <div class="icon-btn" id="camera-btn" title="图像识别自定义">📷</div>
+            <div class="icon-btn" id="hint-btn" title="进入/退出演示模式">💡</div>
+        </div>
     </div>
     
     <div class="timer-display">剩余时间: <span id="timer">--:--</span></div>
@@ -503,16 +550,58 @@
             </div>
         </div>
 
+        <div class="modal" id="image-import-popup">
+            <h2>📷 截图识别自定义</h2>
+            <p style="font-size: 12px; color: #aaa; text-align: center; margin-bottom: 15px;">请分别上传「当前盘面」和「目标图形」的完整方形截图，无需框选，系统将直接识别整图。</p>
+            
+            <div class="upload-container">
+                <div class="upload-box" id="upload-start-box">
+                    <span class="icon">📷</span>
+                    <span class="text">上传初始图</span>
+                    <input type="file" id="file-start" accept="image/*">
+                    <img id="preview-start">
+                </div>
+                <div class="upload-box" id="upload-target-box">
+                    <span class="icon">🎯</span>
+                    <span class="text">上传目标图</span>
+                    <input type="file" id="file-target" accept="image/*">
+                    <img id="preview-target">
+                </div>
+            </div>
+
+            <div class="paste-hint">💡 电脑端可直接按 Ctrl + V 粘贴截图</div>
+
+            <div class="input-row">
+                <div class="input-group">
+                    <label>盘面大小 (N×N)</label>
+                    <input type="number" id="import-size" min="4" max="12" value="7">
+                </div>
+                <div class="input-group">
+                    <label>颜色种数</label>
+                    <input type="number" id="import-colors" min="2" max="8" value="5">
+                </div>
+            </div>
+            
+            <div class="input-group" style="margin-bottom: 15px;">
+                <label>目标折叠次数</label>
+                <input type="number" id="import-folds" min="1" max="20" value="6">
+            </div>
+
+            <div class="modal-btns">
+                <button class="small-btn" onclick="closeImagePopup()">取消</button>
+                <button class="btn" onclick="startImageRecognition()">开始挑战</button>
+            </div>
+        </div>
+
         <div class="toast" id="toast"></div>
     </div>
 
     <script>
-        // 全局配置参数
         let N = 8; 
         let colorCount = 8; 
         let foldRangeText = "4-6";
 
-        const COLORS = [
+        let COLORS = [
             '#FF8C00', '#8A2BE2', '#DC143C', '#FFD700', 
             '#87CEEB', '#00008B', '#FF69B4', '#32CD32'
         ];
@@ -564,10 +653,12 @@
         const redoBtn = document.getElementById('redo-btn');
         const helpBtn = document.getElementById('help-btn');
         const settingsBtn = document.getElementById('settings-btn');
+        const cameraBtn = document.getElementById('camera-btn');
         const rulesPopup = document.getElementById('rules-popup');
         const settingsPopup = document.getElementById('settings-popup');
         const customIdPopup = document.getElementById('custom-id-popup');
         const customIdInput = document.getElementById('custom-id-input');
+        const imageImportPopup = document.getElementById('image-import-popup');
 
         const matchCountEl = document.getElementById('match-count');
         const totalCountEl = document.getElementById('total-count');
@@ -782,7 +873,6 @@
                         break; 
                     }
                 }
-                // 防止死循环，若实在找不到则强制加一步垂直
                 if (!found) {
                     let action = { axis: 'V', k: Math.floor(N/2), side: 'left' };
                     tempGrid = applyFold(tempGrid, action);
@@ -1213,6 +1303,11 @@
             e.stopPropagation();
             if (isAnimating || isVictory) return;
 
+            if (solutionSteps.length === 0 && !isHintMode) {
+                showToast("当前为自定义/识别题目，无演示步骤");
+                return;
+            }
+
             isHintMode = !isHintMode;
             if (isHintMode) {
                 hintBtn.classList.add('active');
@@ -1310,6 +1405,36 @@
             startTimer();
         }
 
+        function startCustomLevel() {
+            isVictory = false;
+            isDragging = false;
+            hasDragged = false;
+            dragAction = null;
+            pendingAction = null;
+            isHintMode = false;
+            isAnimating = false;
+            foldCount = 0;
+            
+            hintBtn.classList.remove('active');
+            overlay.classList.remove('show');
+            document.getElementById('victory-popup').classList.remove('show');
+            imageImportPopup.classList.remove('show');
+            
+            stateHistory = [deepCopyGrid(startGrid)];
+            currentStateIndex = 0;
+            currentGrid = deepCopyGrid(startGrid);
+            
+            document.getElementById('fold-count').innerText = 0;
+            document.getElementById('target-folds').innerText = targetFoldCount; // 显示设定的折叠次数
+            document.getElementById('status-text').innerText = '自定义挑战';
+            document.getElementById('status-text').style.color = '#FFD700';
+
+            updateHistoryButtons();
+            updateProgress();
+            refreshBothBoards();
+            startTimer();
+        }
+
         function resetCurrentLevel() {
             if (isAnimating) return;
             isVictory = false;
@@ -1397,7 +1522,6 @@
                 return;
             }
 
-            // 应用
             colorCount = newColors;
             N = newSize;
             foldRangeText = newFolds;
@@ -1424,6 +1548,250 @@
             loadLevel(val);
         }
 
+        // --- 图像识别逻辑 ---
+        function closeImagePopup() {
+            imageImportPopup.classList.remove('show');
+        }
+
+        document.getElementById('file-start').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const img = document.getElementById('preview-start');
+                    img.src = evt.target.result;
+                    img.classList.add('show');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('file-target').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const img = document.getElementById('preview-target');
+                    img.src = evt.target.result;
+                    img.classList.add('show');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.addEventListener('paste', (e) => {
+            if (!imageImportPopup.classList.contains('show')) return;
+            
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            let imageFile = null;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    imageFile = item.getAsFile();
+                    break;
+                }
+            }
+            if (imageFile) {
+                const fStart = document.getElementById('file-start');
+                const fTarget = document.getElementById('file-target');
+                if (!fStart.files.length) {
+                    const dt = new DataTransfer();
+                    dt.items.add(imageFile);
+                    fStart.files = dt.files;
+                    fStart.dispatchEvent(new Event('change'));
+                    showToast("已粘贴为初始图");
+                } else if (!fTarget.files.length) {
+                    const dt = new DataTransfer();
+                    dt.items.add(imageFile);
+                    fTarget.files = dt.files;
+                    fTarget.dispatchEvent(new Event('change'));
+                    showToast("已粘贴为目标图");
+                } else {
+                    const dt = new DataTransfer();
+                    dt.items.add(imageFile);
+                    fStart.files = dt.files;
+                    fStart.dispatchEvent(new Event('change'));
+                    showToast("已替换初始图");
+                }
+            }
+        });
+
+        function processImages(file1, file2, N, colorCount) {
+            return new Promise((resolve, reject) => {
+                const img1 = new Image();
+                const img2 = new Image();
+                let loaded = 0;
+                function checkLoad() {
+                    loaded++;
+                    if (loaded === 2) {
+                        try {
+                            const res = analyzeImages(img1, img2, N, colorCount);
+                            resolve(res);
+                        } catch (e) {
+                            reject(e);
+                        }
+                    }
+                }
+                img1.onload = checkLoad;
+                img2.onload = checkLoad;
+                img1.onerror = reject;
+                img2.onerror = reject;
+                img1.src = URL.createObjectURL(file1);
+                img2.src = URL.createObjectURL(file2);
+            });
+        }
+
+        function analyzeImages(img1, img2, N, colorCount) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const sampleSize = 100;
+            canvas.width = N * sampleSize;
+            canvas.height = N * sampleSize;
+
+            function processImg(img) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                
+                const grid = [];
+                const colors = [];
+                for (let x = 0; x < N; x++) {
+                    grid[x] = [];
+                    for (let y = 0; y < N; y++) {
+                        grid[x][y] = [];
+                        const pts = [
+                            { dx: 0.5, dy: 0.25 },
+                            { dx: 0.75, dy: 0.5 },
+                            { dx: 0.5, dy: 0.75 },
+                            { dx: 0.25, dy: 0.5 }
+                        ];
+                        for (let i = 0; i < 4; i++) {
+                            const cx = (x + pts[i].dx) * sampleSize;
+                            const cy = (y + pts[i].dy) * sampleSize;
+                            
+                            let counts = {};
+                            for(let dx = -10; dx <= 10; dx+=2) {
+                                for(let dy = -10; dy <= 10; dy+=2) {
+                                    const px = Math.floor(cx + dx);
+                                    const py = Math.floor(cy + dy);
+                                    if(px < 0 || px >= canvas.width || py < 0 || py >= canvas.height) continue;
+                                    const idx = (py * canvas.width + px) * 4;
+                                    const r = data[idx], g = data[idx+1], b = data[idx+2];
+                                    
+                                    // 过滤网格线黑色像素
+                                    if(r < 50 && g < 50 && b < 50) continue;
+                                    
+                                    // 颜色量化
+                                    const qr = Math.round(r / 16) * 16;
+                                    const qg = Math.round(g / 16) * 16;
+                                    const qb = Math.round(b / 16) * 16;
+                                    const key = `${qr},${qg},${qb}`;
+                                    counts[key] = (counts[key] || 0) + 1;
+                                }
+                            }
+                            
+                            let best = '0,0,0', max = 0;
+                            for(let k in counts) {
+                                if(counts[k] > max) { max = counts[k]; best = k; }
+                            }
+                            const rgbStr = `rgb(${best.split(',').join(', ')})`;
+                            grid[x][y][i] = rgbStr;
+                            colors.push(rgbStr);
+                        }
+                    }
+                }
+                return { grid, colors };
+            }
+
+            const res1 = processImg(img1);
+            const res2 = processImg(img2);
+            
+            const allColors = [...res1.colors, ...res2.colors];
+            const colorFreq = {};
+            allColors.forEach(c => colorFreq[c] = (colorFreq[c] || 0) + 1);
+            
+            let sortedColors = Object.keys(colorFreq).sort((a,b) => colorFreq[b] - colorFreq[a]);
+            let palette = sortedColors.slice(0, colorCount);
+            
+            function mapToPalette(grid) {
+                for(let x=0; x<N; x++) {
+                    for(let y=0; y<N; y++) {
+                        for(let i=0; i<4; i++) {
+                            let c = grid[x][y][i];
+                            if (palette.includes(c)) continue;
+                            
+                            let cr = parseInt(c.match(/\d+/g)[0]);
+                            let cg = parseInt(c.match(/\d+/g)[1]);
+                            let cb = parseInt(c.match(/\d+/g)[2]);
+                            let bestC = palette[0], minD = Infinity;
+                            palette.forEach(p => {
+                                let pr = parseInt(p.match(/\d+/g)[0]);
+                                let pg = parseInt(p.match(/\d+/g)[1]);
+                                let pb = parseInt(p.match(/\d+/g)[2]);
+                                let d = (cr-pr)**2 + (cg-pg)**2 + (cb-pb)**2;
+                                if (d < minD) { minD = d; bestC = p; }
+                            });
+                            grid[x][y][i] = bestC;
+                        }
+                    }
+                }
+                return grid;
+            }
+
+            return {
+                startGrid: mapToPalette(res1.grid),
+                targetGrid: mapToPalette(res2.grid),
+                palette: palette,
+                colorCount: palette.length,
+                N: N
+            };
+        }
+
+        function startImageRecognition() {
+            const file1 = document.getElementById('file-start').files[0];
+            const file2 = document.getElementById('file-target').files[0];
+            const newN = parseInt(document.getElementById('import-size').value);
+            const newColors = parseInt(document.getElementById('import-colors').value);
+            const newFolds = parseInt(document.getElementById('import-folds').value);
+
+            if (!file1 || !file2) {
+                showToast("请分别上传两张图片");
+                return;
+            }
+            if (isNaN(newN) || newN < 4 || newN > 12) {
+                showToast("盘面大小请在 4-12 之间");
+                return;
+            }
+            if (isNaN(newColors) || newColors < 2 || newColors > 8) {
+                showToast("颜色种数请在 2-8 之间");
+                return;
+            }
+            if (isNaN(newFolds) || newFolds < 1 || newFolds > 20) {
+                showToast("折叠次数请在 1-20 之间");
+                return;
+            }
+
+            showToast("正在识别...");
+
+            processImages(file1, file2, newN, newColors).then(res => {
+                N = res.N;
+                colorCount = res.colorCount;
+                COLORS = res.palette;
+                
+                startGrid = res.startGrid;
+                targetGrid = res.targetGrid;
+                targetFoldCount = newFolds; // 使用用户输入的折叠次数
+                
+                solutionSteps = [];
+                
+                startCustomLevel();
+                showToast("识别成功！");
+            }).catch(err => {
+                console.error(err);
+                showToast("识别失败，请确保图片样式正确");
+            });
+        }
+
         function showToast(msg) {
             toastEl.innerText = msg;
             toastEl.classList.add('show');
@@ -1437,6 +1805,10 @@
         redoBtn.addEventListener('click', goRedo);
         helpBtn.addEventListener('click', () => rulesPopup.classList.add('show'));
         settingsBtn.addEventListener('click', openSettings);
+        cameraBtn.addEventListener('click', () => {
+            if (isAnimating) return;
+            imageImportPopup.classList.add('show');
+        });
         
         document.getElementById('reset-btn').addEventListener('click', resetCurrentLevel);
         document.getElementById('new-btn').addEventListener('click', () => {
