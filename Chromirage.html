@@ -174,10 +174,10 @@
         .small-icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
         .axis-btn {
-            font-size: 18px; font-weight: bold; color: #ccc;
             width: 30px; height: 30px; border-radius: 8px;
             display: flex; justify-content: center; align-items: center;
             cursor: pointer; transition: all 0.2s; background: transparent;
+            color: #ccc;
         }
         .axis-btn.active {
             background: rgba(91, 192, 222, 0.2);
@@ -186,30 +186,18 @@
             box-shadow: 0 0 8px rgba(91, 192, 222, 0.4);
         }
 
-        .line { background: #ccc; border-radius: 2px; transition: all 0.2s; }
-        .horiz { width: 16px; height: 2px; }
-        .vert { width: 2px; height: 16px; }
-        .diag-m { width: 2px; height: 20px; transform: rotate(45deg); }
-        .diag-a { width: 2px; height: 20px; transform: rotate(-45deg); }
-        
-        .axis-btn.active .line {
-            background: var(--primary-color);
-            box-shadow: 0 0 6px var(--primary-color);
-        }
-
         .board-label { font-size: 13px; color: #aaa; }
 
         .board-wrapper {
             position: relative;
             width: 100%;
-            /* 移除 aspect-ratio，改用 padding-bottom 技巧兼容老版本 WebView */
             padding-top: 100%; 
             background: var(--panel-bg);
             border-radius: var(--border-radius);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.05);
             border: 2px solid rgba(255, 255, 255, 0.1);
             touch-action: none;
-            overflow: hidden; /* 防止内部溢出 */
+            overflow: hidden; 
         }
 
         .board-wrapper.active {
@@ -217,14 +205,13 @@
             box-shadow: 0 0 20px rgba(91, 192, 222, 0.3);
         }
 
-        /* 绝对定位填充容器 */
         canvas {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
             border-radius: 6px; display: block;
             cursor: grab;
-            background-color: #ffffff; /* 加入纯白背景兜底，即使不渲染也不是黑屏 */
+            background-color: #ffffff; 
         }
         canvas:active { cursor: grabbing; }
 
@@ -232,7 +219,7 @@
             width: 55%; 
             position: relative; 
             margin-top: 20px;
-            padding-top: 55%; /* 宽高比技巧：55% * 宽 */
+            padding-top: 55%; 
         }
 
         .controls {
@@ -378,11 +365,28 @@
                     <button class="small-icon-btn" id="undo-btn" title="撤回" disabled>↩️</button>
                     <button class="small-icon-btn" id="redo-btn" title="前进" disabled>↪️</button>
                 </div>
+                <!-- 调整主副对角线顺序：先主(M) 后副(A) -->
                 <div class="axis-controls">
-                    <div class="axis-btn" id="axis-h" title="锁定横折痕（上下折叠）"><div class="line horiz"></div></div>
-                    <div class="axis-btn" id="axis-v" title="锁定竖折痕（左右折叠）"><div class="line vert"></div></div>
-                    <div class="axis-btn" id="axis-m" title="锁定主对角折痕（\）"><div class="line diag-m"></div></div>
-                    <div class="axis-btn" id="axis-a" title="锁定副对角折痕（/）"><div class="line diag-a"></div></div>
+                    <div class="axis-btn" id="axis-h" title="锁定横折痕（上下折叠）">
+                        <svg width="18" height="18" viewBox="0 0 16 16">
+                            <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="axis-btn" id="axis-v" title="锁定竖折痕（左右折叠）">
+                        <svg width="18" height="18" viewBox="0 0 16 16">
+                            <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="axis-btn" id="axis-m" title="锁定主对角折痕（\）">
+                        <svg width="18" height="18" viewBox="0 0 16 16">
+                            <line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="axis-btn" id="axis-a" title="锁定副对角折痕（/）">
+                        <svg width="18" height="18" viewBox="0 0 16 16">
+                            <line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
                 </div>
             </div>
             <div class="board-label">当前盘面</div>
@@ -397,22 +401,41 @@
             <canvas id="target-canvas"></canvas>
         </div>
 
+        <!-- 调整了按钮的显示顺序 -->
         <div class="controls">
-            <button class="action-btn" id="reset-btn">
-                <span class="icon">1️⃣</span>
-                <span>重置盘面</span>
-            </button>
             <button class="action-btn" id="new-btn">
                 <span class="icon" id="new-btn-icon">▶️</span>
                 <span id="new-btn-text">开始游戏</span>
             </button>
             <button class="action-btn" id="custom-btn">
-                <span class="icon">3️⃣</span>
+                <span class="icon">2️⃣</span>
                 <span>指定编号</span>
+            </button>
+            <button class="action-btn" id="reset-btn">
+                <span class="icon">3️⃣</span>
+                <span>重置盘面</span>
             </button>
         </div>
 
-        <!-- 各种弹窗、Toast 保持不变，在此省略以节省篇幅 -->
+        <!-- 新增的确认弹窗 -->
+        <div class="modal" id="confirm-new-popup">
+            <h2>⚠️ 确认提示</h2>
+            <p style="text-align:center; margin-bottom: 0;">本局游戏尚未完成，确定要开始新的游戏吗？</p>
+            <div style="margin-top: 10px;">
+                <button class="small-btn" onclick="closeConfirmNew()">取消</button>
+                <button class="btn" style="margin-left: 10px;" onclick="confirmNew()">确定</button>
+            </div>
+        </div>
+
+        <div class="modal" id="confirm-reset-popup">
+            <h2>⚠️ 确认提示</h2>
+            <p style="text-align:center; margin-bottom: 0;">确定要重置当前盘面吗？</p>
+            <div style="margin-top: 10px;">
+                <button class="small-btn" onclick="closeConfirmReset()">取消</button>
+                <button class="btn" style="margin-left: 10px;" onclick="confirmReset()">确定</button>
+            </div>
+        </div>
+
         <div class="modal" id="victory-popup">
             <h2>🎉 挑战成功！</h2>
             <div>
@@ -436,7 +459,10 @@
         </div>
         <div class="modal" id="custom-id-popup">
             <h2>🔢 指定题目编号</h2>
-            <div class="input-group"><input type="number" id="custom-id-input" min="1" max="100000" placeholder="输入 1 - 100000" value="1"></div>
+            <div class="input-group">
+                <!-- 修改为文本输入，空值，并添加提示 -->
+                <input type="text" id="custom-id-input" maxlength="6" placeholder="请输入1-6位字母和数字构成的字符串" value="">
+            </div>
             <div>
                 <button class="small-btn" onclick="closeCustomPopup()">取消</button>
                 <button class="btn" style="margin-left: 10px;" onclick="confirmCustomId()">开始挑战</button>
@@ -530,13 +556,31 @@
             'A': document.getElementById('axis-a')
         };
 
+        // --- 编号随机与哈希逻辑 ---
+        function getRandomId() {
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            const len = Math.floor(Math.random() * 6) + 1;
+            let res = '';
+            for (let i = 0; i < len; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+            return res;
+        }
+
+        function stringToHash(string) {
+            let hash = 0;
+            if (string.length === 0) return hash;
+            for (let i = 0; i < string.length; i++) {
+                let char = string.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; 
+            }
+            return Math.abs(hash);
+        }
+
         // --- 修复移动端 Canvas 黑屏的核心逻辑 ---
-        // 根据物理尺寸动态调整 canvas.width 和 canvas.height
         function resizeCanvases() {
             const dpr = window.devicePixelRatio || 1;
             
             const mainRect = gameCanvas.parentElement.getBoundingClientRect();
-            // 如果跳转瞬间没渲染出宽度，兜底给300
             const mainSize = Math.max(mainRect.width, 300); 
             if (gameCanvas.width !== Math.floor(mainSize * dpr)) {
                 gameCanvas.width = Math.floor(mainSize * dpr);
@@ -561,7 +605,6 @@
             renderGame(); 
         }
 
-        // 强制重绘监听器（针对从首页跳转来的白屏/黑屏）
         window.addEventListener('pageshow', (e) => {
             setTimeout(resizeAndRefresh, 100);
         });
@@ -806,7 +849,7 @@
 
         function drawBoard(ctx, grid, compareGrid = null) {
             const width = ctx.canvas.width;
-            if (width === 0) return; // 安全判定
+            if (width === 0) return; 
             const cellSize = width / N;
             ctx.clearRect(0, 0, width, width);
 
@@ -975,7 +1018,6 @@
             let clientX = evt.clientX, clientY = evt.clientY;
             if (evt.touches && evt.touches.length > 0) { clientX = evt.touches[0].clientX; clientY = evt.touches[0].clientY; }
             else if (evt.changedTouches && evt.changedTouches.length > 0) { clientX = evt.changedTouches[0].clientX; clientY = evt.changedTouches[0].clientY; }
-            // 适配动态画板尺寸
             return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
         }
 
@@ -989,8 +1031,8 @@
                 const absDx = Math.abs(dx), absDy = Math.abs(dy);
                 if (absDx > 1.5 * absDy) axis = 'V'; 
                 else if (absDy > 1.5 * absDx) axis = 'H'; 
-                else if ((dx > 0 && dy > 0) || (dx < 0 && dy < 0)) axis = 'M';
-                else axis = 'A';
+                else if ((dx > 0 && dy > 0) || (dx < 0 && dy < 0)) axis = 'A'; // 左上到右下对应副对角线 A
+                else axis = 'M'; // 右上到左下对应主对角线 M
             }
 
             if (axis === 'V') {
@@ -1104,10 +1146,27 @@
             });
         }
 
+        // --- 确认弹窗逻辑 ---
+        function openConfirmNew() { document.getElementById('confirm-new-popup').classList.add('show'); }
+        function closeConfirmNew() { document.getElementById('confirm-new-popup').classList.remove('show'); }
+        function confirmNew() {
+            closeConfirmNew();
+            let nextId = getRandomId();
+            loadLevel(nextId);
+        }
+
+        function openConfirmReset() { document.getElementById('confirm-reset-popup').classList.add('show'); }
+        function closeConfirmReset() { document.getElementById('confirm-reset-popup').classList.remove('show'); }
+        function confirmReset() {
+            closeConfirmReset();
+            resetCurrentLevel();
+        }
+
+        // --- 游戏核心逻辑 ---
         function loadLevel(levelId) {
             isGameStarted = true;
             document.getElementById('new-btn-text').innerText = '新的开始';
-            document.getElementById('new-btn-icon').innerText = '2️⃣';
+            document.getElementById('new-btn-icon').innerText = '1️⃣';
             currentLevelId = levelId; document.getElementById('level-id').innerText = levelId;
             
             isVictory = false; isDragging = false; hasDragged = false; dragAction = null; pendingAction = null; isHintMode = false; isAnimating = false; foldCount = 0;
@@ -1115,9 +1174,10 @@
             hintBtn.classList.remove('active'); overlay.classList.remove('show'); document.getElementById('victory-popup').classList.remove('show');
             rulesPopup.classList.remove('show'); settingsPopup.classList.remove('show'); customIdPopup.classList.remove('show');
 
-            const rng = mulberry32(levelId);
+            const seed = typeof levelId === 'string' ? stringToHash(levelId) : levelId;
+            const rng = mulberry32(seed);
             startGrid = createRandomGrid(rng); targetGrid = generateTargetGrid(rng, startGrid);
-            if (isGridEqual(startGrid, targetGrid)) return loadLevel(levelId + 1 > 100000 ? 1 : levelId + 1);
+            if (isGridEqual(startGrid, targetGrid)) return loadLevel(getRandomId());
             
             stateHistory = [deepCopyGrid(startGrid)]; currentStateIndex = 0; currentGrid = deepCopyGrid(startGrid);
             
@@ -1132,7 +1192,7 @@
         function startCustomLevel() {
             isGameStarted = true;
             document.getElementById('new-btn-text').innerText = '新的开始';
-            document.getElementById('new-btn-icon').innerText = '2️⃣';
+            document.getElementById('new-btn-icon').innerText = '1️⃣';
 
             isVictory = false; isDragging = false; hasDragged = false; dragAction = null; pendingAction = null; isHintMode = false; isAnimating = false; foldCount = 0;
             
@@ -1179,7 +1239,8 @@
                 document.getElementById('status-text').innerText = '复盘模式';
                 document.getElementById('status-text').style.color = '#FFD700'; updateHistoryButtons();
             } else {
-                let nextId = Math.floor(Math.random() * 100000) + 1; loadLevel(nextId);
+                let nextId = getRandomId(); 
+                loadLevel(nextId);
             }
         }
 
@@ -1210,13 +1271,18 @@
 
         function openCustomPopup() {
             if (isAnimating) return;
-            customIdInput.value = currentLevelId; customIdPopup.classList.add('show');
+            customIdInput.value = ''; // 清空
+            customIdPopup.classList.add('show');
         }
         function closeCustomPopup() { customIdPopup.classList.remove('show'); }
 
         function confirmCustomId() {
-            let val = parseInt(customIdInput.value);
-            if (isNaN(val) || val < 1 || val > 100000) { showToast("请输入 1 到 100000 之间的数字"); return; }
+            let val = customIdInput.value.trim();
+            if (!/^[a-zA-Z0-9]{1,6}$/.test(val)) { 
+                showToast("请输入1-6位字母和数字构成的字符串"); 
+                return; 
+            }
+            closeCustomPopup();
             loadLevel(val);
         }
 
@@ -1356,8 +1422,19 @@
         settingsBtn.addEventListener('click', openSettings);
         cameraBtn.addEventListener('click', () => { if (isAnimating) return; imageImportPopup.classList.add('show'); });
         
-        document.getElementById('reset-btn').addEventListener('click', resetCurrentLevel);
-        document.getElementById('new-btn').addEventListener('click', () => { let nextId = Math.floor(Math.random() * 100000) + 1; loadLevel(nextId); });
+        // 新的“开始/重置”拦截逻辑
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            if (isGameStarted) openConfirmReset();
+        });
+        
+        document.getElementById('new-btn').addEventListener('click', () => {
+            if (isGameStarted && !isVictory) {
+                openConfirmNew();
+            } else {
+                loadLevel(getRandomId());
+            }
+        });
+        
         document.getElementById('custom-btn').addEventListener('click', openCustomPopup);
 
         let timeLeft = 300;
@@ -1419,7 +1496,6 @@
             refreshBothBoards();
         }
 
-        // 【重要】加入延迟加载，等待 DOM 渲染完毕，解决跳转进入的黑屏
         window.addEventListener('load', () => {
             setTimeout(() => {
                 resizeCanvases();
