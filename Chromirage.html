@@ -45,12 +45,7 @@
             padding: 0 10px;
         }
 
-        .top-left-group {
-            display: flex;
-            gap: 10px;
-        }
-
-        .top-right-group {
+        .top-left-group, .top-right-group {
             display: flex;
             gap: 10px;
         }
@@ -90,20 +85,9 @@
             box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
         }
         
-        #help-btn {
-            color: #5bc0de;
-            border-color: rgba(91, 192, 222, 0.4);
-        }
-
-        #settings-btn {
-            color: #a18cd1;
-            border-color: rgba(161, 140, 209, 0.4);
-        }
-
-        #camera-btn {
-            color: #FFD700;
-            border-color: rgba(255, 215, 0, 0.4);
-        }
+        #help-btn { color: #5bc0de; border-color: rgba(91, 192, 222, 0.4); }
+        #settings-btn { color: #a18cd1; border-color: rgba(161, 140, 209, 0.4); }
+        #camera-btn { color: #FFD700; border-color: rgba(255, 215, 0, 0.4); }
 
         .timer-display {
             font-size: 14px;
@@ -164,11 +148,12 @@
         }
         .progress-text { font-size: 13px; color: #ccc; width: 45px; text-align: right; }
 
+        /* 修改：居中显示 */
         .toggle-container {
             width: 100%;
             max-width: 400px;
             display: flex;
-            justify-content: flex-end;
+            justify-content: center; 
             align-items: center;
             gap: 10px;
             margin-bottom: 10px;
@@ -177,36 +162,20 @@
             color: #ccc;
         }
 
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 40px;
-            height: 22px;
-        }
-
+        .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-
         .slider {
-            position: absolute;
-            cursor: pointer;
+            position: absolute; cursor: pointer;
             top: 0; left: 0; right: 0; bottom: 0;
             background-color: rgba(255,255,255,0.2);
-            transition: .3s;
-            border-radius: 22px;
+            transition: .3s; border-radius: 22px;
         }
-
         .slider:before {
-            position: absolute;
-            content: "";
-            height: 16px;
-            width: 16px;
-            left: 3px;
-            bottom: 3px;
-            background-color: #fff;
-            transition: .3s;
-            border-radius: 50%;
+            position: absolute; content: "";
+            height: 16px; width: 16px;
+            left: 3px; bottom: 3px;
+            background-color: #fff; transition: .3s; border-radius: 50%;
         }
-
         input:checked + .slider { background-color: var(--primary-color); }
         input:checked + .slider:before { transform: translateX(18px); }
 
@@ -228,24 +197,17 @@
             margin-bottom: 5px;
         }
 
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+        .header-left { display: flex; align-items: center; gap: 15px; }
 
         .history-controls, .axis-controls {
-            display: flex;
-            gap: 5px;
+            display: flex; gap: 5px;
             background: rgba(0,0,0,0.2);
-            padding: 3px;
-            border-radius: 10px;
+            padding: 3px; border-radius: 10px;
         }
 
         .small-icon-btn {
             width: 30px; height: 30px; border-radius: 8px;
-            background: transparent;
-            border: 1px solid transparent;
+            background: transparent; border: 1px solid transparent;
             color: #aaa; font-size: 16px;
             display: flex; justify-content: center; align-items: center;
             cursor: pointer; transition: all 0.2s;
@@ -255,21 +217,28 @@
         .small-icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
         .axis-btn {
-            font-size: 18px;
-            font-weight: bold;
-            color: #ccc;
-            width: 30px; height: 30px;
-            border-radius: 8px;
+            font-size: 18px; font-weight: bold; color: #ccc;
+            width: 30px; height: 30px; border-radius: 8px;
             display: flex; justify-content: center; align-items: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: transparent;
+            cursor: pointer; transition: all 0.2s; background: transparent;
         }
         .axis-btn.active {
             background: rgba(91, 192, 222, 0.2);
             color: var(--primary-color);
             border-color: var(--primary-color);
             box-shadow: 0 0 8px rgba(91, 192, 222, 0.4);
+        }
+
+        /* 新增：使用CSS完美绘制45度斜线，避免字体显示问题 */
+        .line { background: #ccc; border-radius: 2px; transition: all 0.2s; }
+        .horiz { width: 16px; height: 2px; }
+        .vert { width: 2px; height: 16px; }
+        .diag-m { width: 2px; height: 20px; transform: rotate(45deg); }
+        .diag-a { width: 2px; height: 20px; transform: rotate(-45deg); }
+        
+        .axis-btn.active .line {
+            background: var(--primary-color);
+            box-shadow: 0 0 6px var(--primary-color);
         }
 
         .board-label { font-size: 13px; color: #aaa; }
@@ -293,6 +262,7 @@
 
         canvas {
             width: 100%; height: 100%;
+            aspect-ratio: 1 / 1; 
             border-radius: 6px; display: block;
             cursor: grab;
         }
@@ -304,29 +274,17 @@
         }
 
         .controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            align-items: center;
-            width: 100%;
-            justify-content: center;
+            display: flex; gap: 10px; margin-top: 15px;
+            align-items: center; width: 100%; justify-content: center;
         }
 
         .action-btn {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            padding: 10px 14px;
-            border-radius: 12px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            flex: 1;
-            max-width: 100px;
+            color: #fff; padding: 10px 14px; border-radius: 12px;
+            font-size: 13px; cursor: pointer; transition: all 0.2s;
+            display: flex; flex-direction: column; align-items: center;
+            gap: 4px; flex: 1; max-width: 100px;
         }
         .action-btn:active { background: rgba(255, 255, 255, 0.2); }
         .action-btn .icon { font-size: 18px; }
@@ -341,14 +299,9 @@
         .btn:active { transform: scale(0.95); }
 
         .small-btn {
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #ccc;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
+            background: transparent; border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ccc; padding: 8px 16px; border-radius: 20px;
+            font-size: 14px; cursor: pointer; transition: all 0.2s;
         }
         .small-btn:active { background: rgba(255, 255, 255, 0.1); }
 
@@ -378,8 +331,7 @@
         .input-group label { font-size: 13px; color: #aaa; }
         .input-group input {
             padding: 10px; border-radius: 8px; border: 1px solid #555;
-            background: #1a1c2c; color: #fff; font-size: 16px;
-            outline: none;
+            background: #1a1c2c; color: #fff; font-size: 16px; outline: none;
         }
         .input-group input:focus { border-color: var(--primary-color); }
 
@@ -411,8 +363,7 @@
             background: rgba(0, 0, 0, 0.85); color: #fff;
             padding: 10px 20px; border-radius: 20px;
             font-size: 14px; opacity: 0; transition: opacity 0.3s;
-            pointer-events: none; z-index: 1000;
-            white-space: nowrap;
+            pointer-events: none; z-index: 1000; white-space: nowrap;
         }
         .toast.show { opacity: 1; }
     </style>
@@ -434,15 +385,15 @@
     </div>
     
     <div class="timer-display">剩余时间: <span id="timer">--:--</span></div>
-    <div class="level-display">当前题目编号: <span id="level-id">1</span></div>
+    <div class="level-display">当前题目编号: <span id="level-id">-</span></div>
 
     <div class="status-bar">
-        <span>🔄 折叠: <span id="fold-count">0</span> / <span id="target-folds">4</span>次</span>
-        <span>🎯 状态: <span id="status-text" style="color:#5bc0de;">进行中</span></span>
+        <span>🔄 折叠: <span id="fold-count">0</span> / <span id="target-folds">-</span>次</span>
+        <span>🎯 状态: <span id="status-text" style="color:#5bc0de;">准备就绪</span></span>
     </div>
 
     <div class="progress-container">
-        <div class="match-text">匹配: <span id="match-count">0</span>/<span id="total-count">256</span></div>
+        <div class="match-text">匹配: <span id="match-count">0</span>/<span id="total-count">196</span></div>
         <div class="progress-bar-wrapper">
             <div class="progress-fill" id="progress-fill"></div>
         </div>
@@ -466,10 +417,11 @@
                     <button class="small-icon-btn" id="redo-btn" title="前进" disabled>↪️</button>
                 </div>
                 <div class="axis-controls">
-                    <div class="axis-btn" id="axis-h" title="锁定横折痕（上下折叠）">—</div>
-                    <div class="axis-btn" id="axis-v" title="锁定竖折痕（左右折叠）">|</div>
-                    <div class="axis-btn" id="axis-m" title="锁定主对角折痕（\）">\</div>
-                    <div class="axis-btn" id="axis-a" title="锁定副对角折痕（/）">/</div>
+                    <!-- 修改：使用CSS代替文本符号 -->
+                    <div class="axis-btn" id="axis-h" title="锁定横折痕（上下折叠）"><div class="line horiz"></div></div>
+                    <div class="axis-btn" id="axis-v" title="锁定竖折痕（左右折叠）"><div class="line vert"></div></div>
+                    <div class="axis-btn" id="axis-m" title="锁定主对角折痕（\）"><div class="line diag-m"></div></div>
+                    <div class="axis-btn" id="axis-a" title="锁定副对角折痕（/）"><div class="line diag-a"></div></div>
                 </div>
             </div>
             <div class="board-label">当前盘面</div>
@@ -490,8 +442,8 @@
                 <span>重置盘面</span>
             </button>
             <button class="action-btn" id="new-btn">
-                <span class="icon">2️⃣</span>
-                <span>新的开始</span>
+                <span class="icon" id="new-btn-icon">▶️</span>
+                <span id="new-btn-text">开始游戏</span>
             </button>
             <button class="action-btn" id="custom-btn">
                 <span class="icon">3️⃣</span>
@@ -523,11 +475,11 @@
             <h2>⚙️ 自定义设置</h2>
             <div class="input-group">
                 <label>1️⃣ 颜色种类数目（2-8）</label>
-                <input type="number" id="setting-colors" min="2" max="8" value="8">
+                <input type="number" id="setting-colors" min="2" max="8" value="5">
             </div>
             <div class="input-group">
                 <label>2️⃣ 盘面规格大小（4-12）</label>
-                <input type="number" id="setting-size" min="4" max="12" value="8">
+                <input type="number" id="setting-size" min="4" max="12" value="7">
             </div>
             <div class="input-group">
                 <label>3️⃣ 折叠次数（单数字如 5，或范围如 4-6）</label>
@@ -597,9 +549,10 @@
     </div>
 
     <script>
-        let N = 8; 
-        let colorCount = 8; 
+        let N = 7; 
+        let colorCount = 5; 
         let foldRangeText = "4-6";
+        let isGameStarted = false; 
 
         let COLORS = [
             '#FF8C00', '#8A2BE2', '#DC143C', '#FFD700', 
@@ -614,7 +567,7 @@
         let currentStateIndex = -1;
         
         let foldCount = 0;
-        let targetFoldCount = 4;
+        let targetFoldCount = 6;
         let isVictory = false;
         
         let isHintMode = false;
@@ -900,12 +853,12 @@
         }
 
         function updateHistoryButtons() {
-            undoBtn.disabled = (currentStateIndex <= 0) || isVictory || isHintMode || isAnimating;
-            redoBtn.disabled = (currentStateIndex >= stateHistory.length - 1) || isVictory || isHintMode || isAnimating;
+            undoBtn.disabled = (currentStateIndex <= 0) || isVictory || isHintMode || isAnimating || !isGameStarted;
+            redoBtn.disabled = (currentStateIndex >= stateHistory.length - 1) || isVictory || isHintMode || isAnimating || !isGameStarted;
         }
 
         function goUndo() {
-            if (currentStateIndex > 0) {
+            if (currentStateIndex > 0 && isGameStarted) {
                 currentStateIndex--;
                 currentGrid = deepCopyGrid(stateHistory[currentStateIndex]);
                 foldCount = currentStateIndex;
@@ -918,7 +871,7 @@
         }
 
         function goRedo() {
-            if (currentStateIndex < stateHistory.length - 1) {
+            if (currentStateIndex < stateHistory.length - 1 && isGameStarted) {
                 currentStateIndex++;
                 currentGrid = deepCopyGrid(stateHistory[currentStateIndex]);
                 foldCount = currentStateIndex;
@@ -933,6 +886,14 @@
         function updateProgress() {
             const totalTris = N * N * 4;
             totalCountEl.innerText = totalTris;
+            
+            if (!isGameStarted) {
+                matchCountEl.innerText = '0';
+                progressFillEl.style.width = '0%';
+                progressTextEl.innerText = '0%';
+                return;
+            }
+
             const matchCount = calculateMatch(currentGrid, targetGrid);
             const percent = Math.floor((matchCount / totalTris) * 100);
             
@@ -954,16 +915,22 @@
             const cellSize = width / N;
             ctx.clearRect(0, 0, width, width);
 
+            if (!grid || grid.length === 0) return;
+
             for (let x = 0; x < N; x++) {
                 for (let y = 0; y < N; y++) {
                     const px = x * cellSize, py = y * cellSize;
                     const cx = px + cellSize / 2, cy = py + cellSize / 2;
-                    const colors = grid[x][y];
+                    const colors = grid[x][y] || [];
                     const compColors = compareGrid ? compareGrid[x][y] : null;
 
                     const getColor = (idx) => {
-                        if (compColors && colors[idx] !== compColors[idx]) return '#ffffff'; 
-                        return colors[idx];
+                        let c = colors[idx];
+                        if (!c || c === 'rgb(0, 0, 0)' || c === 'rgb(0,0,0)' || c === '#000000') {
+                            return '#ffffff';
+                        }
+                        if (compColors && c !== compColors[idx]) return '#ffffff'; 
+                        return c;
                     };
 
                     ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + cellSize, py); ctx.lineTo(cx, cy); ctx.closePath();
@@ -1178,23 +1145,32 @@
             return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
         }
 
+        // 修改：优化滑动方向判定逻辑
         function getDragAction(startX, startY, endX, endY) {
             const dx = endX - startX;
             const dy = endY - startY;
-            if (Math.hypot(dx, dy) < 20) return null;
+            if (Math.hypot(dx, dy) < 25) return null;
 
             const cellSize = gameCanvas.width / N;
             let axis = lockedAxis;
 
             if (!axis) {
-                const projV = Math.abs(dx), projH = Math.abs(dy);
-                const projM = Math.abs(dx + dy) / Math.SQRT2;
-                const projA = Math.abs(dx - dy) / Math.SQRT2;
-
-                let maxVal = projV; axis = 'V';
-                if (projH > maxVal) { maxVal = projH; axis = 'H'; }
-                if (projM > maxVal) { maxVal = projM; axis = 'M'; }
-                if (projA > maxVal) { maxVal = projA; axis = 'A'; }
+                const absDx = Math.abs(dx);
+                const absDy = Math.abs(dy);
+                
+                // 根据拖动幅度占比进行判定
+                if (absDx > 1.5 * absDy) {
+                    axis = 'V'; // 横向滑动
+                } else if (absDy > 1.5 * absDx) {
+                    axis = 'H'; // 纵向滑动
+                } else {
+                    // 斜向滑动（dx 和 dy 幅度接近）
+                    if ((dx > 0 && dy > 0) || (dx < 0 && dy < 0)) {
+                        axis = 'M'; // 左上到右下（主对角线）
+                    } else {
+                        axis = 'A'; // 右上到左下（副对角线）
+                    }
+                }
             }
 
             if (axis === 'V') {
@@ -1222,7 +1198,7 @@
         }
 
         function startDrag(e) {
-            if (isVictory || isHintMode || isAnimating) return;
+            if (isVictory || isHintMode || isAnimating || !isGameStarted) return;
             e.preventDefault();
             
             isDragging = true;
@@ -1274,7 +1250,7 @@
 
         gameCanvas.addEventListener('dblclick', (e) => {
             e.preventDefault();
-            if (isVictory || isHintMode || isAnimating) return;
+            if (isVictory || isHintMode || isAnimating || !isGameStarted) return;
             if (pendingAction) {
                 executePendingAction();
             }
@@ -1301,7 +1277,7 @@
         
         hintBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (isAnimating || isVictory) return;
+            if (isAnimating || isVictory || !isGameStarted) return;
 
             if (solutionSteps.length === 0 && !isHintMode) {
                 showToast("当前为自定义/识别题目，无演示步骤");
@@ -1362,6 +1338,10 @@
         }
 
         function loadLevel(levelId) {
+            isGameStarted = true;
+            document.getElementById('new-btn-text').innerText = '新的开始';
+            document.getElementById('new-btn-icon').innerText = '2️⃣';
+
             currentLevelId = levelId;
             document.getElementById('level-id').innerText = levelId;
             
@@ -1406,6 +1386,10 @@
         }
 
         function startCustomLevel() {
+            isGameStarted = true;
+            document.getElementById('new-btn-text').innerText = '新的开始';
+            document.getElementById('new-btn-icon').innerText = '2️⃣';
+
             isVictory = false;
             isDragging = false;
             hasDragged = false;
@@ -1425,7 +1409,7 @@
             currentGrid = deepCopyGrid(startGrid);
             
             document.getElementById('fold-count').innerText = 0;
-            document.getElementById('target-folds').innerText = targetFoldCount; // 显示设定的折叠次数
+            document.getElementById('target-folds').innerText = targetFoldCount;
             document.getElementById('status-text').innerText = '自定义挑战';
             document.getElementById('status-text').style.color = '#FFD700';
 
@@ -1436,7 +1420,7 @@
         }
 
         function resetCurrentLevel() {
-            if (isAnimating) return;
+            if (isAnimating || !isGameStarted) return;
             isVictory = false;
             isDragging = false;
             hasDragged = false;
@@ -1462,6 +1446,7 @@
         }
 
         function checkVictory() {
+            if (!isGameStarted) return;
             if (isGridEqual(currentGrid, targetGrid)) {
                 if (isVictory) return;
                 isVictory = true;
@@ -1504,6 +1489,7 @@
 
         function closeSettings() { settingsPopup.classList.remove('show'); }
 
+        // 修改：应用设置后重置为空白盘面
         function applySettings() {
             let newColors = parseInt(document.getElementById('setting-colors').value);
             let newSize = parseInt(document.getElementById('setting-size').value);
@@ -1527,8 +1513,8 @@
             foldRangeText = newFolds;
 
             closeSettings();
-            loadLevel(currentLevelId);
-            showToast("设置已应用，题目已重置");
+            initGame(); // 重置为空白盘面，使用新尺寸
+            showToast("设置已应用，请点击开始游戏");
         }
 
         function openCustomPopup() {
@@ -1678,10 +1664,8 @@
                                     const idx = (py * canvas.width + px) * 4;
                                     const r = data[idx], g = data[idx+1], b = data[idx+2];
                                     
-                                    // 过滤网格线黑色像素
-                                    if(r < 50 && g < 50 && b < 50) continue;
+                                    if(r < 70 && g < 70 && b < 70) continue;
                                     
-                                    // 颜色量化
                                     const qr = Math.round(r / 16) * 16;
                                     const qg = Math.round(g / 16) * 16;
                                     const qb = Math.round(b / 16) * 16;
@@ -1690,7 +1674,7 @@
                                 }
                             }
                             
-                            let best = '0,0,0', max = 0;
+                            let best = '255,255,255', max = 0;
                             for(let k in counts) {
                                 if(counts[k] > max) { max = counts[k]; best = k; }
                             }
@@ -1710,8 +1694,15 @@
             const colorFreq = {};
             allColors.forEach(c => colorFreq[c] = (colorFreq[c] || 0) + 1);
             
-            let sortedColors = Object.keys(colorFreq).sort((a,b) => colorFreq[b] - colorFreq[a]);
+            let sortedColors = Object.keys(colorFreq).filter(c => {
+                let parts = c.match(/\d+/g);
+                return parseInt(parts[0]) > 40 || parseInt(parts[1]) > 40 || parseInt(parts[2]) > 40;
+            }).sort((a,b) => colorFreq[b] - colorFreq[a]);
+            
             let palette = sortedColors.slice(0, colorCount);
+            if (palette.length === 0) {
+                palette = ['rgb(255, 140, 0)', 'rgb(138, 43, 226)', 'rgb(220, 20, 60)', 'rgb(255, 215, 0)', 'rgb(135, 206, 235)'].slice(0, colorCount);
+            }
             
             function mapToPalette(grid) {
                 for(let x=0; x<N; x++) {
@@ -1780,7 +1771,7 @@
                 
                 startGrid = res.startGrid;
                 targetGrid = res.targetGrid;
-                targetFoldCount = newFolds; // 使用用户输入的折叠次数
+                targetFoldCount = newFolds;
                 
                 solutionSteps = [];
                 
@@ -1847,7 +1838,54 @@
             document.getElementById('timer').innerText = `${m}:${s}`;
         }
 
-        loadLevel(Math.floor(Math.random() * 100000) + 1);
+        function initGame() {
+            isGameStarted = false;
+            document.getElementById('new-btn-text').innerText = '开始游戏';
+            document.getElementById('new-btn-icon').innerText = '▶️';
+            
+            // 注意：不在这里强行重置 N 和 colorCount，使用全局最新的设置
+            
+            function createBlankGrid() {
+                const grid = [];
+                for (let x = 0; x < N; x++) {
+                    grid[x] = [];
+                    for (let y = 0; y < N; y++) {
+                        grid[x][y] = ['#ffffff', '#ffffff', '#ffffff', '#ffffff'];
+                    }
+                }
+                return grid;
+            }
+            
+            startGrid = createBlankGrid();
+            targetGrid = createBlankGrid();
+            currentGrid = createBlankGrid();
+            stateHistory = [deepCopyGrid(startGrid)];
+            currentStateIndex = 0;
+            foldCount = 0;
+            targetFoldCount = 6;
+            
+            document.getElementById('level-id').innerText = '-';
+            document.getElementById('fold-count').innerText = '0';
+            document.getElementById('target-folds').innerText = '-';
+            document.getElementById('status-text').innerText = '准备就绪';
+            document.getElementById('status-text').style.color = '#5bc0de';
+            
+            document.getElementById('match-count').innerText = '0';
+            document.getElementById('total-count').innerText = N * N * 4;
+            document.getElementById('progress-fill').style.width = '0%';
+            document.getElementById('progress-text').innerText = '0%';
+            document.getElementById('progress-fill').style.background = 'linear-gradient(90deg, #a18cd1 0%, #5bc0de 100%)';
+            document.getElementById('progress-text').style.color = '#ccc';
+            
+            stopTimer();
+            document.getElementById('timer').innerText = '--:--';
+            
+            updateHistoryButtons();
+            refreshBothBoards();
+        }
+
+        // 页面载入时执行初始化
+        initGame();
     </script>
 </body>
 </html>
