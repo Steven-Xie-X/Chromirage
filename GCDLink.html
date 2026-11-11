@@ -17,33 +17,32 @@
             --danger-color: #ff3333;
         }
 
-        /* 防止全局溢出导致居中失效 */
-        html {
-            height: 100%;
+        /* 强制修复全局溢出 */
+        html, body {
+            margin: 0;
+            padding: 0;
             width: 100%;
-            overflow-x: hidden;
-        }
-
-        body {
+            height: 100%;
+            overflow-x: hidden; /* 彻底切断横向溢出 */
             background-color: var(--bg-color);
             color: var(--text-color);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
-            margin: 0;
-            padding: 15px 0; /* 左右不留 padding，由子元素统一控制，彻底解决偏心 */
             box-sizing: border-box;
-            overflow-x: hidden;
-            /* 移除移动端点击阴影和长按选中 */
+            padding: 15px 0; /* 上下留白，左右由子容器控制 */
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
         }
 
-        /* 统一内容容器，保证在宽屏下也完全居中 */
+        /* 统一的绝对居中包裹层 */
         .container {
             width: 100%;
             max-width: 500px;
@@ -54,7 +53,7 @@
             align-items: center;
         }
 
-        /* --- 对称的顶部栏 --- */
+        /* 头部 */
         .header-row {
             display: grid;
             grid-template-columns: 40px 1fr 40px;
@@ -87,12 +86,9 @@
             color: white;
             cursor: pointer;
             box-shadow: 0 0 10px rgba(233, 69, 96, 0.4);
-            transition: transform 0.2s;
-            overflow: hidden; /* 防止 emoji 撑大网格 */
         }
-        .icon-btn:hover { transform: scale(1.1); }
+        .icon-btn:active { transform: scale(0.95); }
 
-        /* 操作栏 */
         .action-row-1 {
             display: flex;
             gap: 10px;
@@ -103,7 +99,6 @@
             width: 100%;
         }
 
-        /* 尺寸行 */
         .size-row {
             display: flex;
             gap: 8px;
@@ -113,30 +108,23 @@
             width: 100%;
         }
 
-        /* 状态信息行 - 修复撑破问题 */
+        /* 状态信息行：使用 Grid 均分宽度防止撑破 */
         .info-row {
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
             align-items: center;
             gap: 5px;
             margin-bottom: 12px;
             width: 100%;
-        }
-
-        .info-box {
-            flex: 1;
-            min-width: 0; /* 关键，允许 flex 子项缩小 */
-            font-size: clamp(10px, 3.5vw, 15px); /* 自动缩放字体 */
+            font-size: clamp(11px, 3.5vw, 14px); /* 自动缩放字体防溢出 */
             font-weight: bold;
             color: #ffd369;
-            letter-spacing: 1px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis; /* 宽度不足时显示省略号 */
-            text-align: center;
         }
 
-        /* 撤回与前进 */
+        .info-box-left { text-align: left; white-space: nowrap; }
+        .info-box-center { text-align: center; white-space: nowrap; }
+        .info-box-right { text-align: right; white-space: nowrap; }
+
         .undo-row {
             display: flex;
             align-items: center;
@@ -146,7 +134,7 @@
             width: 100%;
         }
 
-        /* 通用按钮 (统一深蓝色，无特殊高亮) */
+        /* 统一按钮样式 */
         .btn {
             background-color: #0f3460;
             color: white;
@@ -161,10 +149,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            -webkit-tap-highlight-color: transparent;
         }
 
-        .btn:hover { background-color: var(--cell-hover); }
+        .btn:active { transform: scale(0.95); }
         .btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
         
         .btn.active {
@@ -173,13 +160,15 @@
             box-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
         }
 
-        /* 盘面区域 */
+        /* 盘面容器 */
         .game-area {
             width: 100%;
             aspect-ratio: 1 / 1;
             position: relative;
             border-radius: 12px;
             margin-bottom: 20px;
+            /* 防止撑开 */
+            max-width: 100%;
         }
 
         .grid-container {
@@ -198,11 +187,13 @@
             grid-auto-rows: 1fr; 
         }
 
-        /* 画布不再扩大，保持 100% 贴边，靠外层不隐藏溢出 */
+        /* Canvas 向外扩大 40px，防止盘外连线被裁切 */
         #line-canvas {
             position: absolute;
-            top: 0; left: 0; 
-            width: 100%; height: 100%;
+            top: -40px; 
+            left: -40px;
+            width: calc(100% + 80px);
+            height: calc(100% + 80px);
             pointer-events: none;
             z-index: 10;
         }
@@ -221,12 +212,7 @@
             position: relative;
             color: #e0e0e0;
             aspect-ratio: 1 / 1; 
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .cell:hover:not(.eliminated) {
-            background-color: var(--cell-hover);
-            transform: scale(1.05);
+            overflow: hidden;
         }
 
         .cell.selected {
@@ -266,7 +252,7 @@
             transform: scale(0.3);
         }
 
-        /* 弹窗样式 */
+        /* 弹窗层 */
         .modal-overlay {
             display: none;
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -295,9 +281,7 @@
             background: none; border: none; color: #888;
             font-size: 24px; cursor: pointer;
         }
-        .close-btn:hover { color: white; }
 
-        /* 设置表单 */
         .setting-item {
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 20px; background: #0f3460;
@@ -310,7 +294,6 @@
             border: 1px solid var(--cell-border); border-radius: 4px; text-align: center; outline: none;
         }
         
-        /* 拨动开关 */
         .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider {
@@ -325,7 +308,6 @@
         input:checked + .slider { background-color: var(--success-color); }
         input:checked + .slider:before { transform: translateX(22px); }
 
-        /* 自定义输入框 & 确认框 */
         .prompt-content { text-align: center; max-width: 320px; }
         .prompt-input {
             width: 80%; padding: 10px; margin-bottom: 20px; background: #0f3460;
@@ -334,7 +316,6 @@
         }
         .prompt-actions { display: flex; justify-content: center; gap: 15px; }
 
-        /* Toast */
         .toast-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             justify-content: center; align-items: center; z-index: 2000; pointer-events: none; 
@@ -349,7 +330,6 @@
 </head>
 <body>
 
-    <!-- 统一居中容器 -->
     <div class="container">
         <div class="header-row">
             <button class="icon-btn" id="settings-btn">⚙️</button>
@@ -371,14 +351,13 @@
             <button class="btn size-btn" data-size="10">10x10</button>
         </div>
 
-        <!-- 状态信息整合行 -->
+        <!-- 状态信息行 -->
         <div class="info-row">
-            <div class="info-box">作答时间: <span id="timer">00:00</span></div>
-            <div class="info-box">题目编号: <span id="puzzle-id-val">------</span></div>
-            <div class="info-box">误点次数: <span id="error-count">0</span></div>
+            <div class="info-box-left">时间: <span id="timer">00:00</span></div>
+            <div class="info-box-center">编号: <span id="puzzle-id-val">------</span></div>
+            <div class="info-box-right">误点: <span id="error-count">0</span></div>
         </div>
 
-        <!-- 撤回与前进 -->
         <div class="undo-row">
             <button id="undo-btn" class="btn" disabled>撤回</button>
             <button id="redo-btn" class="btn" disabled>前进</button>
@@ -432,11 +411,11 @@
         </div>
     </div>
 
-    <!-- 自定义指定编号输入框 -->
+    <!-- 自定义输入框 -->
     <div class="modal-overlay" id="custom-prompt-modal">
         <div class="modal-content prompt-content">
             <h3 style="margin-top: 0; color: var(--accent-color);">指定编号</h3>
-            <p style="font-size: 14px; color: #ccc; margin-bottom: 15px;">请输入6位题目编号（字母和数字组合）：</p>
+            <p style="font-size: 14px; color: #ccc; margin-bottom: 15px;">请输入6位题目编号：</p>
             <input type="text" id="custom-prompt-input" class="prompt-input" maxlength="6" placeholder="例如: A1B2C3">
             <div class="prompt-actions">
                 <button class="btn" id="custom-prompt-ok">确定</button>
@@ -467,12 +446,11 @@
     </div>
 
     <script>
-        // --- 全局设置 ---
+        // --- 全局变量 ---
         let settingMinVal = 1;
         let settingMaxVal = 99;
         let settingAllowOutside = true;
 
-        // --- 游戏状态 ---
         let currentSize = 8;
         let currentSeed = '';
         let board = [];       
@@ -490,11 +468,9 @@
         let timerInterval = null;
         let seconds = 0;
         let toastTimeout = null;
-
-        // 确认框回调
         let confirmAction = null;
 
-        // --- DOM 元素 ---
+        // DOM
         const gridEl = document.getElementById('grid');
         const canvasEl = document.getElementById('line-canvas');
         const ctx = canvasEl.getContext('2d');
@@ -533,24 +509,6 @@
         const toastTimeEl = document.getElementById('toast-time');
         const puzzleIdVal = document.getElementById('puzzle-id-val');
 
-        // --- Canvas 尺寸自适应 ---
-        function resizeCanvas() {
-            const dpr = window.devicePixelRatio || 1;
-            const rect = canvasEl.getBoundingClientRect();
-            canvasEl.width = rect.width * dpr;
-            canvasEl.height = rect.height * dpr;
-            // 将绘图比例映射为像素
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctx.clearRect(0, 0, rect.width, rect.height);
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-        const resizeObserver = new ResizeObserver(() => {
-            resizeCanvas();
-            updateGridFontSize();
-        });
-        resizeObserver.observe(document.querySelector('.game-area'));
-
         // --- 伪随机数引擎 ---
         let seedState = 0;
         function srand(str) {
@@ -575,7 +533,6 @@
                 [arr[i], arr[j]] = [arr[j], arr[i]];
             }
         }
-
         function generateRandomSeed() {
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             let seed = '';
@@ -584,39 +541,31 @@
             }
             return seed;
         }
-
-        // --- 核心工具 ---
         function gcd(a, b) {
             while (b !== 0) { let temp = b; b = a % b; a = temp; }
             return a;
         }
 
-        // --- 自定义通用确认框 ---
-        function showConfirm(message, action) {
-            confirmMessage.textContent = message;
-            confirmAction = action;
-            confirmModal.style.display = 'flex';
+        // --- Canvas 尺寸强制校准 ---
+        function forceCanvasResize() {
+            const dpr = window.devicePixelRatio || 1;
+            // 获取 Canvas 自身的 CSS 宽高（包含 +80px 的扩展）
+            const rect = canvasEl.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+            
+            canvasEl.width = rect.width * dpr;
+            canvasEl.height = rect.height * dpr;
+            // 重置坐标映射，保证每次画线都不受历史操作影响
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
 
-        confirmOk.addEventListener('click', () => {
-            confirmModal.style.display = 'none';
-            if (confirmAction) confirmAction();
-            confirmAction = null;
-        });
-
-        confirmCancel.addEventListener('click', () => {
-            confirmModal.style.display = 'none';
-            confirmAction = null;
-        });
-
-        confirmModal.addEventListener('click', (e) => {
-            if (e.target === confirmModal) {
-                confirmModal.style.display = 'none';
-                confirmAction = null;
-            }
-        });
-
         // --- 字体自适应 ---
+        const resizeObserver = new ResizeObserver(() => {
+            forceCanvasResize();
+            updateGridFontSize();
+        });
+        resizeObserver.observe(document.querySelector('.game-area'));
+
         function updateGridFontSize() {
             if (!board.length || !gridEl.clientWidth) return;
             const style = window.getComputedStyle(gridEl);
@@ -625,7 +574,8 @@
             
             const availableWidth = gridEl.clientWidth - padding * 2 - gap * (currentSize - 1);
             const cellSize = availableWidth / currentSize;
-            const fontSize = Math.max(8, cellSize * 0.45); 
+            // 因可能产生大数字，字体占比稍微降低一点以防撑破
+            const fontSize = Math.max(8, cellSize * 0.35); 
             
             document.querySelectorAll('.cell').forEach(el => {
                 el.style.fontSize = `${fontSize}px`;
@@ -682,7 +632,7 @@
             return null;
         }
 
-        // --- 生成逻辑 ---
+        // --- 动态大数范围生成 ---
         function generateSolvableBoard(size) {
             const N = size * size;
             let list = [];
@@ -790,7 +740,7 @@
 
         function stopTimer() { clearInterval(timerInterval); }
 
-        // --- 状态与渲染 ---
+        // --- 状态更新 ---
         function updateButtonStates() {
             undoBtn.disabled = historyStack.length <= 1;
             redoBtn.disabled = redoStack.length === 0;
@@ -828,6 +778,7 @@
             updateGridFontSize();
         }
 
+        // --- 历史记录 ---
         function saveHistory() {
             historyStack.push(JSON.parse(JSON.stringify(board)));
             redoStack = []; 
@@ -850,7 +801,7 @@
             updateButtonStates();
         }
 
-        // --- 游戏初始化 ---
+        // --- 初始化与重置 ---
         function resetGame() {
             isPlaying = false;
             isGameOver = false;
@@ -866,10 +817,10 @@
             timerEl.textContent = '00:00';
             gridEl.innerHTML = '';
             
+            forceCanvasResize();
             ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
             
             startBtn.textContent = '开始游戏';
-            
             puzzleIdVal.textContent = '------';
             updateButtonStates();
         }
@@ -919,7 +870,7 @@
             setTimeout(() => {
                 updateGridFontSize();
                 startTimer();
-                resizeCanvas(); 
+                forceCanvasResize();
             }, 50);
 
             startBtn.textContent = '新的开始';
@@ -942,31 +893,29 @@
             return result;
         }
 
-        // --- 画线动画 ---
+        // --- 画线动画 (彻底重写，兼容所有移动端) ---
         function drawLineAnimation(rawPath, isValid) {
             const path = simplifyPath(rawPath);
             
-            const rect = canvasEl.getBoundingClientRect();
-            ctx.clearRect(0, 0, rect.width, rect.height);
+            // 强制重新计算尺寸，避免移动端渲染失效
+            forceCanvasResize();
+            ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
             
-            const cell0 = gridEl.querySelector('.cell[data-r="0"][data-c="0"]');
-            if (!cell0) return;
+            // 获取网格相对其父级的位置、宽高、padding、gap
+            const gridW = gridEl.offsetWidth;
+            const style = window.getComputedStyle(gridEl);
+            const pad = parseFloat(style.paddingLeft) || 0;
+            const gap = parseFloat(style.gap) || 0;
+            
+            // 算出格子的实际大小
+            const cellSize = (gridW - pad * 2 - gap * (currentSize - 1)) / currentSize;
 
-            // 获取网格的实际位置
-            const startX = cell0.offsetLeft;
-            const startY = cell0.offsetTop;
-            const cellW = cell0.offsetWidth;
-            const cellH = cell0.offsetHeight;
+            // Canvas 因向四周扩大了 40px，计算坐标时需要补偿
+            const offset = 40;
             
-            const cell1 = gridEl.querySelector('.cell[data-r="0"][data-c="1"]');
-            const stepX = cell1 ? (cell1.offsetLeft - cell0.offsetLeft) : (cellW + 8);
-            
-            const cell10 = gridEl.querySelector('.cell[data-r="1"][data-c="0"]');
-            const stepY = cell10 ? (cell10.offsetTop - cell0.offsetTop) : (cellH + 8);
-
             const getPixelPos = (r, c) => {
-                const x = startX + c * stepX + cellW / 2;
-                const y = startY + r * stepY + cellH / 2;
+                const x = offset + pad + c * (cellSize + gap) + cellSize / 2;
+                const y = offset + pad + r * (cellSize + gap) + cellSize / 2;
                 return { x, y };
             };
 
@@ -987,11 +936,11 @@
             ctx.stroke();
 
             setTimeout(() => { 
-                ctx.clearRect(0, 0, rect.width, rect.height); 
+                ctx.clearRect(0, 0, canvasEl.width, canvasEl.height); 
             }, 400);
         }
 
-        // --- 核心点击事件 ---
+        // --- 核心点击交互 ---
         function handleCellClick(r, c, cellElement) {
             if (!isPlaying || isGameOver || isProcessing) return;
             if (cellElement.classList.contains('eliminated')) return;
@@ -1101,7 +1050,7 @@
             }
         }
 
-        // --- 自定义 Toast ---
+        // --- Toast ---
         function showToast(timeStr) {
             toastTimeEl.textContent = timeStr;
             toastEl.style.display = 'flex';
@@ -1123,6 +1072,31 @@
         window.addEventListener('click', () => {
             if (toastEl.style.display === 'flex') hideToast();
         }, true);
+
+        // --- 确认框 ---
+        function showConfirm(message, action) {
+            confirmMessage.textContent = message;
+            confirmAction = action;
+            confirmModal.style.display = 'flex';
+        }
+
+        confirmOk.addEventListener('click', () => {
+            confirmModal.style.display = 'none';
+            if (confirmAction) confirmAction();
+            confirmAction = null;
+        });
+
+        confirmCancel.addEventListener('click', () => {
+            confirmModal.style.display = 'none';
+            confirmAction = null;
+        });
+
+        confirmModal.addEventListener('click', (e) => {
+            if (e.target === confirmModal) {
+                confirmModal.style.display = 'none';
+                confirmAction = null;
+            }
+        });
 
         // --- 按钮事件 ---
         sizeBtns.forEach(btn => {
@@ -1241,7 +1215,7 @@
 
         // 初始化
         resetGame();
-        setTimeout(resizeCanvas, 100);
+        setTimeout(forceCanvasResize, 100);
 
     </script>
 </body>
