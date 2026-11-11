@@ -17,13 +17,13 @@
             --danger-color: #ff3333;
         }
 
-        /* 强制修复全局溢出 */
+        /* 防止全局溢出导致居中失效 */
         html, body {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            overflow-x: hidden; /* 彻底切断横向溢出 */
+            overflow-x: hidden;
             background-color: var(--bg-color);
             color: var(--text-color);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -35,14 +35,14 @@
             align-items: center;
             min-height: 100vh;
             box-sizing: border-box;
-            padding: 15px 0; /* 上下留白，左右由子容器控制 */
+            padding: 15px 0;
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
         }
 
-        /* 统一的绝对居中包裹层 */
+        /* 统一的居中包裹层 */
         .container {
             width: 100%;
             max-width: 500px;
@@ -108,7 +108,7 @@
             width: 100%;
         }
 
-        /* 状态信息行：使用 Grid 均分宽度防止撑破 */
+        /* 状态信息行 */
         .info-row {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
@@ -116,7 +116,7 @@
             gap: 5px;
             margin-bottom: 12px;
             width: 100%;
-            font-size: clamp(11px, 3.5vw, 14px); /* 自动缩放字体防溢出 */
+            font-size: clamp(11px, 3.5vw, 14px);
             font-weight: bold;
             color: #ffd369;
         }
@@ -167,7 +167,6 @@
             position: relative;
             border-radius: 12px;
             margin-bottom: 20px;
-            /* 防止撑开 */
             max-width: 100%;
         }
 
@@ -187,7 +186,7 @@
             grid-auto-rows: 1fr; 
         }
 
-        /* Canvas 向外扩大 40px，防止盘外连线被裁切 */
+        /* 画布外扩 40px，用于绘制外圈连线 */
         #line-canvas {
             position: absolute;
             top: -40px; 
@@ -252,7 +251,7 @@
             transform: scale(0.3);
         }
 
-        /* 弹窗层 */
+        /* 弹窗样式 */
         .modal-overlay {
             display: none;
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -369,7 +368,7 @@
         </div>
     </div>
 
-    <!-- 规则弹窗 -->
+    <!-- 各种弹窗与提示 (略，与之前保持一致) -->
     <div class="modal-overlay" id="rule-modal">
         <div class="modal-content">
             <button class="close-btn" id="close-rule">&times;</button>
@@ -382,12 +381,10 @@
         </div>
     </div>
 
-    <!-- 设置弹窗 -->
     <div class="modal-overlay" id="settings-modal">
         <div class="modal-content">
             <button class="close-btn" id="close-settings">&times;</button>
             <h2>游戏设置</h2>
-            
             <div class="setting-item">
                 <span class="setting-label">数字范围</span>
                 <div class="range-inputs">
@@ -396,7 +393,6 @@
                     <input type="number" id="setting-max" value="99" min="2" max="9999">
                 </div>
             </div>
-
             <div class="setting-item">
                 <span class="setting-label">允许盘外连线</span>
                 <label class="switch">
@@ -404,14 +400,12 @@
                     <span class="slider"></span>
                 </label>
             </div>
-
             <div style="display: flex; justify-content: center; margin-top: 25px;">
                 <button class="btn" id="save-settings-btn" style="width: 80%;">保存并重启</button>
             </div>
         </div>
     </div>
 
-    <!-- 自定义输入框 -->
     <div class="modal-overlay" id="custom-prompt-modal">
         <div class="modal-content prompt-content">
             <h3 style="margin-top: 0; color: var(--accent-color);">指定编号</h3>
@@ -424,7 +418,6 @@
         </div>
     </div>
 
-    <!-- 自定义通用确认框 -->
     <div class="modal-overlay" id="custom-confirm-modal">
         <div class="modal-content prompt-content">
             <h3 style="margin-top: 0; color: var(--accent-color);">提示</h3>
@@ -436,7 +429,6 @@
         </div>
     </div>
 
-    <!-- Toast -->
     <div id="custom-toast" class="toast-overlay">
         <div class="toast-content">
             <h3 style="margin: 0 0 10px 0; color: var(--success-color);">恭喜你！</h3>
@@ -473,7 +465,7 @@
         // DOM
         const gridEl = document.getElementById('grid');
         const canvasEl = document.getElementById('line-canvas');
-        const ctx = canvasEl.getContext('2d');
+        const ctx = canvasEl.getContext('2d', { alpha: true });
         const timerEl = document.getElementById('timer');
         const errorCountEl = document.getElementById('error-count');
         const startBtn = document.getElementById('start-btn');
@@ -508,6 +500,47 @@
         const toastEl = document.getElementById('custom-toast');
         const toastTimeEl = document.getElementById('toast-time');
         const puzzleIdVal = document.getElementById('puzzle-id-val');
+
+        // --- 核心修复：Canvas 初始化与坐标计算 ---
+        
+        // 每次画线前，强制同步 Canvas 物理像素尺寸
+        function syncCanvasSize() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvasEl.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+            
+            // 只有当尺寸变化时才重置，避免频繁清空
+            if (canvasEl.width !== Math.floor(rect.width * dpr) || 
+                canvasEl.height !== Math.floor(rect.height * dpr)) {
+                canvasEl.width = Math.floor(rect.width * dpr);
+                canvasEl.height = Math.floor(rect.height * dpr);
+            }
+        }
+
+        window.addEventListener('resize', syncCanvasSize);
+        // 移动端地址栏收缩会导致视口改变，需要重新计算
+        window.addEventListener('orientationchange', syncCanvasSize);
+
+        const resizeObserver = new ResizeObserver(() => {
+            syncCanvasSize();
+            updateGridFontSize();
+        });
+        resizeObserver.observe(document.querySelector('.game-area'));
+
+        function updateGridFontSize() {
+            if (!board.length || !gridEl.clientWidth) return;
+            const style = window.getComputedStyle(gridEl);
+            const padding = parseFloat(style.paddingLeft) || 0;
+            const gap = parseFloat(style.gap) || 0;
+            
+            const availableWidth = gridEl.clientWidth - padding * 2 - gap * (currentSize - 1);
+            const cellSize = availableWidth / currentSize;
+            const fontSize = Math.max(8, cellSize * 0.35); 
+            
+            document.querySelectorAll('.cell').forEach(el => {
+                el.style.fontSize = `${fontSize}px`;
+            });
+        }
 
         // --- 伪随机数引擎 ---
         let seedState = 0;
@@ -544,42 +577,6 @@
         function gcd(a, b) {
             while (b !== 0) { let temp = b; b = a % b; a = temp; }
             return a;
-        }
-
-        // --- Canvas 尺寸强制校准 ---
-        function forceCanvasResize() {
-            const dpr = window.devicePixelRatio || 1;
-            // 获取 Canvas 自身的 CSS 宽高（包含 +80px 的扩展）
-            const rect = canvasEl.getBoundingClientRect();
-            if (rect.width === 0 || rect.height === 0) return;
-            
-            canvasEl.width = rect.width * dpr;
-            canvasEl.height = rect.height * dpr;
-            // 重置坐标映射，保证每次画线都不受历史操作影响
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        }
-
-        // --- 字体自适应 ---
-        const resizeObserver = new ResizeObserver(() => {
-            forceCanvasResize();
-            updateGridFontSize();
-        });
-        resizeObserver.observe(document.querySelector('.game-area'));
-
-        function updateGridFontSize() {
-            if (!board.length || !gridEl.clientWidth) return;
-            const style = window.getComputedStyle(gridEl);
-            const padding = parseFloat(style.paddingLeft) || 0;
-            const gap = parseFloat(style.gap) || 0;
-            
-            const availableWidth = gridEl.clientWidth - padding * 2 - gap * (currentSize - 1);
-            const cellSize = availableWidth / currentSize;
-            // 因可能产生大数字，字体占比稍微降低一点以防撑破
-            const fontSize = Math.max(8, cellSize * 0.35); 
-            
-            document.querySelectorAll('.cell').forEach(el => {
-                el.style.fontSize = `${fontSize}px`;
-            });
         }
 
         // --- 寻路算法 ---
@@ -632,7 +629,7 @@
             return null;
         }
 
-        // --- 动态大数范围生成 ---
+        // --- 动态生成 ---
         function generateSolvableBoard(size) {
             const N = size * size;
             let list = [];
@@ -740,7 +737,7 @@
 
         function stopTimer() { clearInterval(timerInterval); }
 
-        // --- 状态更新 ---
+        // --- 状态与渲染 ---
         function updateButtonStates() {
             undoBtn.disabled = historyStack.length <= 1;
             redoBtn.disabled = redoStack.length === 0;
@@ -801,7 +798,7 @@
             updateButtonStates();
         }
 
-        // --- 初始化与重置 ---
+        // --- 初始化 ---
         function resetGame() {
             isPlaying = false;
             isGameOver = false;
@@ -817,7 +814,7 @@
             timerEl.textContent = '00:00';
             gridEl.innerHTML = '';
             
-            forceCanvasResize();
+            syncCanvasSize();
             ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
             
             startBtn.textContent = '开始游戏';
@@ -861,7 +858,11 @@
                     cell.textContent = board[r][c];
                     cell.dataset.r = r;
                     cell.dataset.c = c;
-                    cell.addEventListener('click', () => handleCellClick(r, c, cell));
+                    // 防止移动端点击穿透和滚动干扰
+                    cell.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        handleCellClick(r, c, cell);
+                    });
                     gridEl.appendChild(cell);
                 }
             }
@@ -870,7 +871,7 @@
             setTimeout(() => {
                 updateGridFontSize();
                 startTimer();
-                forceCanvasResize();
+                syncCanvasSize();
             }, 50);
 
             startBtn.textContent = '新的开始';
@@ -893,27 +894,32 @@
             return result;
         }
 
-        // --- 画线动画 (彻底重写，兼容所有移动端) ---
+        // --- 终极画线修复：彻底摒弃绝对定位，使用纯相对计算 ---
         function drawLineAnimation(rawPath, isValid) {
             const path = simplifyPath(rawPath);
             
-            // 强制重新计算尺寸，避免移动端渲染失效
-            forceCanvasResize();
+            // 每次画线前，强制重新获取一次物理像素比和尺寸，并重置变换矩阵
+            syncCanvasSize();
+            const dpr = window.devicePixelRatio || 1;
+            
+            // 重置状态，清空画布
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
             
-            // 获取网格相对其父级的位置、宽高、padding、gap
+            // 获取网格容器的相对几何属性
             const gridW = gridEl.offsetWidth;
             const style = window.getComputedStyle(gridEl);
             const pad = parseFloat(style.paddingLeft) || 0;
             const gap = parseFloat(style.gap) || 0;
             
-            // 算出格子的实际大小
+            // 推算单个格子的实际宽度
             const cellSize = (gridW - pad * 2 - gap * (currentSize - 1)) / currentSize;
 
-            // Canvas 因向四周扩大了 40px，计算坐标时需要补偿
+            // 因为 CSS 中 Canvas 向外偏移了 -40px，相对坐标需要补偿这 40px
             const offset = 40;
             
             const getPixelPos = (r, c) => {
+                // 计算格子中心点相对 Canvas 的偏移
                 const x = offset + pad + c * (cellSize + gap) + cellSize / 2;
                 const y = offset + pad + r * (cellSize + gap) + cellSize / 2;
                 return { x, y };
@@ -935,12 +941,14 @@
             }
             ctx.stroke();
 
+            // 400ms 后清理画布，恢复默认状态
             setTimeout(() => { 
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 ctx.clearRect(0, 0, canvasEl.width, canvasEl.height); 
             }, 400);
         }
 
-        // --- 核心点击交互 ---
+        // --- 点击交互 ---
         function handleCellClick(r, c, cellElement) {
             if (!isPlaying || isGameOver || isProcessing) return;
             if (cellElement.classList.contains('eliminated')) return;
@@ -1050,7 +1058,7 @@
             }
         }
 
-        // --- Toast ---
+        // --- 各种弹窗与交互 ---
         function showToast(timeStr) {
             toastTimeEl.textContent = timeStr;
             toastEl.style.display = 'flex';
@@ -1073,7 +1081,6 @@
             if (toastEl.style.display === 'flex') hideToast();
         }, true);
 
-        // --- 确认框 ---
         function showConfirm(message, action) {
             confirmMessage.textContent = message;
             confirmAction = action;
@@ -1098,7 +1105,6 @@
             }
         });
 
-        // --- 按钮事件 ---
         sizeBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const targetBtn = e.target;
@@ -1215,7 +1221,6 @@
 
         // 初始化
         resetGame();
-        setTimeout(forceCanvasResize, 100);
 
     </script>
 </body>
