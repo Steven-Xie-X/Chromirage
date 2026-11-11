@@ -90,7 +90,7 @@
             width: 100%;
         }
 
-        /* 状态信息行 (优化为不换行) */
+        /* 状态信息行 */
         .info-row {
             display: flex;
             justify-content: space-around;
@@ -103,7 +103,6 @@
         }
 
         .info-box {
-            /* 使用 clamp 保证小屏幕自动缩小 */
             font-size: clamp(12px, 3.5vw, 15px);
             font-weight: bold;
             color: #ffd369;
@@ -155,12 +154,13 @@
         }
         .start-btn:hover { background-color: #00cc6a; }
 
-        /* 盘面 */
+        /* 盘面居中 */
         .game-area {
             width: min(95vw, 500px, 55vh);
             aspect-ratio: 1 / 1;
             position: relative;
             margin: 0 auto;
+            align-self: center;
         }
 
         .grid-container {
@@ -179,7 +179,7 @@
             grid-auto-rows: 1fr; 
         }
 
-        /* 解决外圈画线被裁剪，将 Canvas 扩大 */
+        /* 扩大画布以容纳外部连线，防止外圈连线被截断 */
         #line-canvas {
             position: absolute;
             top: -150px; 
@@ -400,7 +400,8 @@
             <div class="setting-item">
                 <span class="setting-label">允许盘外连线</span>
                 <label class="switch">
-                    <input type="checkbox" id="setting-allow-outside">
+                    <!-- 默认勾选 -->
+                    <input type="checkbox" id="setting-allow-outside" checked>
                     <span class="slider"></span>
                 </label>
             </div>
@@ -449,7 +450,8 @@
         // --- 全局设置 ---
         let settingMinVal = 1;
         let settingMaxVal = 99;
-        let settingAllowOutside = false;
+        // 默认允许盘外连线
+        let settingAllowOutside = true;
 
         // --- 游戏状态 ---
         let currentSize = 8;
@@ -598,11 +600,10 @@
             });
         }
 
-        // --- 寻路算法 (修复剪枝错误，完美支持盘外2折) ---
+        // --- 寻路算法 ---
         function findPath(r1, c1, r2, c2) {
             if (r1 === r2 && c1 === c2) return null;
             
-            // 扩展外围一圈
             const minR = settingAllowOutside ? -1 : 0;
             const maxR = settingAllowOutside ? currentSize : currentSize - 1;
             const minC = settingAllowOutside ? -1 : 0;
@@ -610,8 +611,6 @@
 
             const queue = [{ r: r1, c: c1, dir: -1, turns: 0, path: [[r1, c1]] }];
             const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]]; 
-            
-            // 使用 Map 存储到达某点某个方向的最小转弯数
             const visited = new Map();
 
             while (queue.length > 0) {
@@ -635,7 +634,7 @@
                     if (nr >= 0 && nr < currentSize && nc >= 0 && nc < currentSize) {
                         isBlank = (gridState[nr][nc] === 0);
                     } else {
-                        isBlank = true; // 外圈均为空白
+                        isBlank = true; 
                     }
 
                     if (isBlank) {
@@ -921,8 +920,13 @@
             const path = simplifyPath(rawPath);
             
             const dpr = window.devicePixelRatio || 1;
-            canvasEl.width = canvasEl.clientWidth * dpr;
-            canvasEl.height = canvasEl.clientHeight * dpr;
+            // 每次画线前检查并更新画布物理尺寸
+            const canvasW = canvasEl.clientWidth;
+            const canvasH = canvasEl.clientHeight;
+            if (canvasEl.width !== canvasW * dpr || canvasEl.height !== canvasH * dpr) {
+                canvasEl.width = canvasW * dpr;
+                canvasEl.height = canvasH * dpr;
+            }
             
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
@@ -930,9 +934,9 @@
             const cell0 = gridEl.querySelector('.cell[data-r="0"][data-c="0"]');
             if (!cell0) return;
 
-            // 用 offset 尺寸计算绝对位置，不受动画变形影响
-            const startX = cell0.offsetLeft;
-            const startY = cell0.offsetTop;
+            // 由于 Canvas 在 CSS 中向外扩展了 150px，计算坐标时需要补上偏移量
+            const startX = cell0.offsetLeft + 150;
+            const startY = cell0.offsetTop + 150;
             const cellW = cell0.offsetWidth;
             const cellH = cell0.offsetHeight;
             
@@ -942,22 +946,19 @@
             const cell10 = gridEl.querySelector('.cell[data-r="1"][data-c="0"]');
             const stepY = cell10 ? (cell10.offsetTop - cell0.offsetTop) : (cellH + 8);
 
-            // 由于 Canvas 在 CSS 中向外扩展了 150px 以容纳外圈连线，这里加上偏移量
-            const canvasOffset = 150;
-
             const getPixelPos = (r, c) => {
-                const x = startX + c * stepX + cellW / 2 + canvasOffset;
-                const y = startY + r * stepY + cellH / 2 + canvasOffset;
+                const x = startX + c * stepX + cellW / 2;
+                const y = startY + r * stepY + cellH / 2;
                 return { x: x * dpr, y: y * dpr };
             };
 
             ctx.beginPath();
             ctx.strokeStyle = isValid ? '#00ff88' : '#ff3333';
-            ctx.lineWidth = 5 * dpr;
+            ctx.lineWidth = 5 * dpr; 
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
             ctx.shadowColor = isValid ? '#00ff88' : '#ff3333';
-            ctx.shadowBlur = 10 * dpr;
+            ctx.shadowBlur = 10 * dpr; 
 
             const p0 = getPixelPos(path[0][0], path[0][1]);
             ctx.moveTo(p0.x, p0.y);
@@ -1074,6 +1075,7 @@
 
             if (allEmpty) {
                 isGameOver = true;
+                isPlaying = false; // 关键修复：将状态设为非进行中，防止通关后点新开始再弹提示
                 stopTimer();
                 setTimeout(() => {
                     showToast(formatTime(seconds));
@@ -1081,7 +1083,7 @@
             }
         }
 
-        // --- 自定义 Toast ---
+        // --- 自定义 Toast (持续时间2秒) ---
         function showToast(timeStr) {
             toastTimeEl.textContent = timeStr;
             toastEl.style.display = 'flex';
@@ -1089,7 +1091,7 @@
             if (toastTimeout) clearTimeout(toastTimeout);
             toastTimeout = setTimeout(() => {
                 hideToast();
-            }, 1500);
+            }, 2000); // 1500 -> 2000
         }
 
         function hideToast() {
