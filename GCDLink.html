@@ -90,22 +90,25 @@
             width: 100%;
         }
 
-        /* 状态信息行 (时间、编号、误点) */
+        /* 状态信息行 (优化为不换行) */
         .info-row {
             display: flex;
-            justify-content: center;
+            justify-content: space-around;
             align-items: center;
-            gap: 15px;
+            gap: 5px;
             margin-bottom: 12px;
             width: 100%;
-            flex-wrap: wrap;
+            max-width: 500px;
+            flex-wrap: nowrap;
         }
 
         .info-box {
-            font-size: 15px;
+            /* 使用 clamp 保证小屏幕自动缩小 */
+            font-size: clamp(12px, 3.5vw, 15px);
             font-weight: bold;
             color: #ffd369;
             letter-spacing: 1px;
+            white-space: nowrap;
         }
 
         /* 撤回与前进 */
@@ -176,13 +179,15 @@
             grid-auto-rows: 1fr; 
         }
 
+        /* 解决外圈画线被裁剪，将 Canvas 扩大 */
         #line-canvas {
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: -150px; 
+            left: -150px;
+            width: calc(100% + 300px);
+            height: calc(100% + 300px);
             pointer-events: none;
             z-index: 10;
-            border-radius: 12px;
-            overflow: visible; 
         }
 
         .cell {
@@ -400,7 +405,6 @@
                 </label>
             </div>
 
-            <!-- 按钮居中 -->
             <div style="display: flex; justify-content: center; margin-top: 25px;">
                 <button class="btn start-btn" id="save-settings-btn" style="width: 80%;">保存并重启</button>
             </div>
@@ -499,7 +503,6 @@
         const promptOk = document.getElementById('custom-prompt-ok');
         const promptCancel = document.getElementById('custom-prompt-cancel');
         
-        // 确认框元素
         const confirmModal = document.getElementById('custom-confirm-modal');
         const confirmMessage = document.getElementById('confirm-message');
         const confirmOk = document.getElementById('confirm-ok');
@@ -576,17 +579,9 @@
 
         // --- 字体自适应 ---
         const resizeObserver = new ResizeObserver(() => {
-            resizeCanvas();
             updateGridFontSize();
         });
         resizeObserver.observe(document.querySelector('.game-area'));
-
-        function resizeCanvas() {
-            if (!canvasEl.clientWidth || !canvasEl.clientHeight) return;
-            const dpr = window.devicePixelRatio || 1;
-            canvasEl.width = canvasEl.clientWidth * dpr;
-            canvasEl.height = canvasEl.clientHeight * dpr;
-        }
 
         function updateGridFontSize() {
             if (!board.length || !gridEl.clientWidth) return;
@@ -603,10 +598,11 @@
             });
         }
 
-        // --- 寻路算法 ---
+        // --- 寻路算法 (修复剪枝错误，完美支持盘外2折) ---
         function findPath(r1, c1, r2, c2) {
             if (r1 === r2 && c1 === c2) return null;
             
+            // 扩展外围一圈
             const minR = settingAllowOutside ? -1 : 0;
             const maxR = settingAllowOutside ? currentSize : currentSize - 1;
             const minC = settingAllowOutside ? -1 : 0;
@@ -614,7 +610,9 @@
 
             const queue = [{ r: r1, c: c1, dir: -1, turns: 0, path: [[r1, c1]] }];
             const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]]; 
-            const visited = new Set();
+            
+            // 使用 Map 存储到达某点某个方向的最小转弯数
+            const visited = new Map();
 
             while (queue.length > 0) {
                 const curr = queue.shift();
@@ -637,15 +635,16 @@
                     if (nr >= 0 && nr < currentSize && nc >= 0 && nc < currentSize) {
                         isBlank = (gridState[nr][nc] === 0);
                     } else {
-                        isBlank = true;
+                        isBlank = true; // 外圈均为空白
                     }
 
                     if (isBlank) {
                         const stateKey = `${nr},${nc},${d}`;
-                        if (!visited.has(stateKey)) {
-                            visited.add(stateKey);
-                            queue.push({ r: nr, c: nc, dir: d, turns: nextTurns, path: [...curr.path, [nr, nc]] });
+                        if (visited.has(stateKey) && visited.get(stateKey) <= nextTurns) {
+                            continue;
                         }
+                        visited.set(stateKey, nextTurns);
+                        queue.push({ r: nr, c: nc, dir: d, turns: nextTurns, path: [...curr.path, [nr, nc]] });
                     }
                 }
             }
@@ -836,6 +835,7 @@
             timerEl.textContent = '00:00';
             gridEl.innerHTML = '';
             
+            const dpr = window.devicePixelRatio || 1;
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
             
@@ -890,7 +890,6 @@
 
             updateGridState();
             setTimeout(() => {
-                resizeCanvas();
                 updateGridFontSize();
                 startTimer();
             }, 50);
@@ -917,36 +916,48 @@
             return result;
         }
 
-        // --- 画线动画 ---
+        // --- 画线动画 (完美兼容移动端与外圈) ---
         function drawLineAnimation(rawPath, isValid) {
             const path = simplifyPath(rawPath);
             
             const dpr = window.devicePixelRatio || 1;
-            ctx.setTransform(1, 0, 0, 1, 0, 0); 
+            canvasEl.width = canvasEl.clientWidth * dpr;
+            canvasEl.height = canvasEl.clientHeight * dpr;
+            
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
-            ctx.scale(dpr, dpr); 
             
-            const rect = gridEl.getBoundingClientRect();
-            const style = window.getComputedStyle(gridEl);
-            let gap = parseFloat(style.gap);
-            if (isNaN(gap)) gap = 8; 
-            const padding = parseFloat(style.paddingLeft) || 0;
+            const cell0 = gridEl.querySelector('.cell[data-r="0"][data-c="0"]');
+            if (!cell0) return;
+
+            // 用 offset 尺寸计算绝对位置，不受动画变形影响
+            const startX = cell0.offsetLeft;
+            const startY = cell0.offsetTop;
+            const cellW = cell0.offsetWidth;
+            const cellH = cell0.offsetHeight;
             
-            const cellSize = (rect.width - padding * 2 - gap * (currentSize - 1)) / currentSize;
+            const cell1 = gridEl.querySelector('.cell[data-r="0"][data-c="1"]');
+            const stepX = cell1 ? (cell1.offsetLeft - cell0.offsetLeft) : (cellW + 8);
             
+            const cell10 = gridEl.querySelector('.cell[data-r="1"][data-c="0"]');
+            const stepY = cell10 ? (cell10.offsetTop - cell0.offsetTop) : (cellH + 8);
+
+            // 由于 Canvas 在 CSS 中向外扩展了 150px 以容纳外圈连线，这里加上偏移量
+            const canvasOffset = 150;
+
             const getPixelPos = (r, c) => {
-                const x = padding + c * (cellSize + gap) + cellSize / 2;
-                const y = padding + r * (cellSize + gap) + cellSize / 2;
-                return { x, y };
+                const x = startX + c * stepX + cellW / 2 + canvasOffset;
+                const y = startY + r * stepY + cellH / 2 + canvasOffset;
+                return { x: x * dpr, y: y * dpr };
             };
 
             ctx.beginPath();
             ctx.strokeStyle = isValid ? '#00ff88' : '#ff3333';
-            ctx.lineWidth = 5;
+            ctx.lineWidth = 5 * dpr;
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
             ctx.shadowColor = isValid ? '#00ff88' : '#ff3333';
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 10 * dpr;
 
             const p0 = getPixelPos(path[0][0], path[0][1]);
             ctx.moveTo(p0.x, p0.y);
@@ -957,7 +968,6 @@
             ctx.stroke();
 
             setTimeout(() => { 
-                ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvasEl.width, canvasEl.height); 
             }, 400);
         }
@@ -1095,8 +1105,6 @@
         }, true);
 
         // --- 按钮事件 ---
-        
-        // 尺寸切换逻辑：加入自定义确认框
         sizeBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const targetBtn = e.target;
@@ -1116,7 +1124,6 @@
             });
         });
 
-        // 开始游戏逻辑：加入自定义确认框
         startBtn.addEventListener('click', () => {
             if (isPlaying) {
                 showConfirm('当前对局未完成，确定要开始新的游戏吗？', () => {
@@ -1127,7 +1134,6 @@
             }
         });
 
-        // 指定编号
         specifySeedBtn.addEventListener('click', () => {
             promptInput.value = '';
             promptInput.style.borderColor = 'var(--cell-border)';
@@ -1155,12 +1161,10 @@
             if (e.key === 'Enter') promptOk.click();
         });
 
-        // 规则弹窗
         ruleBtn.addEventListener('click', () => ruleModal.style.display = 'flex');
         closeRuleBtn.addEventListener('click', () => ruleModal.style.display = 'none');
         ruleModal.addEventListener('click', (e) => { if (e.target === ruleModal) ruleModal.style.display = 'none'; });
 
-        // 设置弹窗
         settingsBtn.addEventListener('click', () => {
             settingMinInput.value = settingMinVal;
             settingMaxInput.value = settingMaxVal;
