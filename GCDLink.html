@@ -17,7 +17,7 @@
             --danger-color: #ff3333;
         }
 
-        /* 防止全局溢出导致居中失效 */
+        /* 强制修复全局溢出 */
         html, body {
             margin: 0;
             padding: 0;
@@ -166,7 +166,7 @@
             aspect-ratio: 1 / 1;
             position: relative;
             border-radius: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             max-width: 100%;
         }
 
@@ -249,6 +249,62 @@
             border-color: transparent;
             background-color: transparent;
             transform: scale(0.3);
+        }
+
+        /* 质因数提示框 */
+        .hint-container {
+            width: 100%;
+            background-color: var(--grid-bg);
+            border-radius: 8px;
+            border: 1px solid var(--cell-border);
+            padding: 10px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        .hint-title {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 8px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 5px;
+        }
+
+        /* 增加了最大高度，方便查看更多记录 */
+        .hint-list {
+            max-height: 180px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* 隐藏滚动条但保留功能 */
+        .hint-list::-webkit-scrollbar { width: 6px; }
+        .hint-list::-webkit-scrollbar-thumb { background: var(--cell-border); border-radius: 3px; }
+        .hint-list::-webkit-scrollbar-track { background: transparent; }
+
+        .hint-item {
+            padding: 6px 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            border-left: 3px solid var(--cell-border);
+            font-size: 14px;
+            color: #ccc;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .hint-item.latest {
+            border-left-color: var(--success-color);
+            background: rgba(0, 255, 136, 0.1);
+            color: #fff;
+            font-weight: bold;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-10px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
 
         /* 弹窗样式 */
@@ -366,9 +422,15 @@
             <div class="grid-container" id="grid"></div>
             <canvas id="line-canvas"></canvas>
         </div>
+
+        <!-- 质因数辅助提示框 -->
+        <div class="hint-container">
+            <div class="hint-title">长按格子0.5秒查看质因数分解 (最多保留100条记录)</div>
+            <div class="hint-list" id="hint-list"></div>
+        </div>
     </div>
 
-    <!-- 各种弹窗与提示 (略，与之前保持一致) -->
+    <!-- 规则弹窗 -->
     <div class="modal-overlay" id="rule-modal">
         <div class="modal-content">
             <button class="close-btn" id="close-rule">&times;</button>
@@ -377,14 +439,17 @@
             <p>2. 如果商为 <strong>1</strong>，则该数字被消除；如果商大于1，则该数字将更新为商并保留。</p>
             <p>3. <strong>连通性限制：</strong>选择的两个数字之间，必须存在一条仅经过<strong>空白区域</strong>的通路。连线<strong>最多只能拐2个弯</strong>。</p>
             <p>4. <strong>颜色提示：</strong>有效时显示 <span class="color-green">绿色</span>；无效时显示 <span class="color-red">红色</span>。</p>
-            <p>5. 消除盘面上所有的数字即可获得胜利！</p>
+            <p>5. <strong>辅助功能：</strong>若遇到难解的数字，可<strong>长按</strong>该数字 0.5 秒，屏幕下方的提示框会显示该数字的质因数分解，辅助你进行计算（最多保留100条最新记录）。</p>
+            <p>6. 消除盘面上所有的数字即可获得胜利！</p>
         </div>
     </div>
 
+    <!-- 设置弹窗 -->
     <div class="modal-overlay" id="settings-modal">
         <div class="modal-content">
             <button class="close-btn" id="close-settings">&times;</button>
             <h2>游戏设置</h2>
+            
             <div class="setting-item">
                 <span class="setting-label">数字范围</span>
                 <div class="range-inputs">
@@ -393,6 +458,7 @@
                     <input type="number" id="setting-max" value="99" min="2" max="9999">
                 </div>
             </div>
+
             <div class="setting-item">
                 <span class="setting-label">允许盘外连线</span>
                 <label class="switch">
@@ -400,12 +466,14 @@
                     <span class="slider"></span>
                 </label>
             </div>
+
             <div style="display: flex; justify-content: center; margin-top: 25px;">
                 <button class="btn" id="save-settings-btn" style="width: 80%;">保存并重启</button>
             </div>
         </div>
     </div>
 
+    <!-- 自定义输入框 -->
     <div class="modal-overlay" id="custom-prompt-modal">
         <div class="modal-content prompt-content">
             <h3 style="margin-top: 0; color: var(--accent-color);">指定编号</h3>
@@ -418,6 +486,7 @@
         </div>
     </div>
 
+    <!-- 自定义通用确认框 -->
     <div class="modal-overlay" id="custom-confirm-modal">
         <div class="modal-content prompt-content">
             <h3 style="margin-top: 0; color: var(--accent-color);">提示</h3>
@@ -429,6 +498,7 @@
         </div>
     </div>
 
+    <!-- Toast -->
     <div id="custom-toast" class="toast-overlay">
         <div class="toast-content">
             <h3 style="margin: 0 0 10px 0; color: var(--success-color);">恭喜你！</h3>
@@ -461,6 +531,11 @@
         let seconds = 0;
         let toastTimeout = null;
         let confirmAction = null;
+
+        // 长按变量：时间修改为 500ms
+        let pressTimer = null;
+        let isLongPress = false;
+        const LONG_PRESS_DURATION = 500; 
 
         // DOM
         const gridEl = document.getElementById('grid');
@@ -500,16 +575,53 @@
         const toastEl = document.getElementById('custom-toast');
         const toastTimeEl = document.getElementById('toast-time');
         const puzzleIdVal = document.getElementById('puzzle-id-val');
-
-        // --- 核心修复：Canvas 初始化与坐标计算 ---
         
-        // 每次画线前，强制同步 Canvas 物理像素尺寸
+        // 提示框 DOM
+        const hintListEl = document.getElementById('hint-list');
+
+        // --- 核心辅助逻辑：质因数分解 ---
+        function getPrimeFactorsStr(num) {
+            if (num <= 1) return num.toString();
+            let temp = num;
+            let factors = [];
+            for (let i = 2; i * i <= temp; i++) {
+                while (temp % i === 0) {
+                    factors.push(i);
+                    temp /= i;
+                }
+            }
+            if (temp > 1) factors.push(temp);
+            return num + "=" + factors.join("*");
+        }
+
+        function addHint(val) {
+            if (!isPlaying || val === null) return;
+            let str = getPrimeFactorsStr(val);
+            
+            let item = document.createElement('div');
+            item.className = 'hint-item latest';
+            item.textContent = str;
+            
+            // 移除之前的 latest 样式
+            document.querySelectorAll('.hint-item').forEach(el => el.classList.remove('latest'));
+            
+            // 插入到第 1 行
+            hintListEl.prepend(item);
+            
+            // 最多保留 100 条
+            if (hintListEl.children.length > 100) {
+                hintListEl.removeChild(hintListEl.lastChild);
+            }
+            // 滚动到最顶部看最新
+            hintListEl.scrollTop = 0;
+        }
+
+        // --- Canvas 尺寸同步 ---
         function syncCanvasSize() {
             const dpr = window.devicePixelRatio || 1;
             const rect = canvasEl.getBoundingClientRect();
             if (rect.width === 0 || rect.height === 0) return;
             
-            // 只有当尺寸变化时才重置，避免频繁清空
             if (canvasEl.width !== Math.floor(rect.width * dpr) || 
                 canvasEl.height !== Math.floor(rect.height * dpr)) {
                 canvasEl.width = Math.floor(rect.width * dpr);
@@ -518,7 +630,6 @@
         }
 
         window.addEventListener('resize', syncCanvasSize);
-        // 移动端地址栏收缩会导致视口改变，需要重新计算
         window.addEventListener('orientationchange', syncCanvasSize);
 
         const resizeObserver = new ResizeObserver(() => {
@@ -813,6 +924,7 @@
             stopTimer();
             timerEl.textContent = '00:00';
             gridEl.innerHTML = '';
+            hintListEl.innerHTML = ''; // 清空提示框
             
             syncCanvasSize();
             ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
@@ -832,6 +944,7 @@
             selectedCells = [];
             errorCount = 0;
             errorCountEl.textContent = '0';
+            hintListEl.innerHTML = ''; // 清空提示框
             
             let seed = seedStr;
             if (!seed) {
@@ -858,11 +971,49 @@
                     cell.textContent = board[r][c];
                     cell.dataset.r = r;
                     cell.dataset.c = c;
-                    // 防止移动端点击穿透和滚动干扰
+                    
+                    // 点击事件
                     cell.addEventListener('click', (e) => {
                         e.preventDefault();
+                        if (isLongPress) {
+                            isLongPress = false;
+                            return; // 如果刚触发长按，忽略点击
+                        }
                         handleCellClick(r, c, cell);
                     });
+
+                    // 长按事件（鼠标）
+                    cell.addEventListener('mousedown', (e) => {
+                        isLongPress = false;
+                        if (pressTimer) clearTimeout(pressTimer);
+                        pressTimer = setTimeout(() => {
+                            isLongPress = true;
+                            addHint(board[r][c]);
+                        }, LONG_PRESS_DURATION);
+                    });
+                    cell.addEventListener('mouseup', () => {
+                        if (pressTimer) clearTimeout(pressTimer);
+                    });
+                    cell.addEventListener('mouseleave', () => {
+                        if (pressTimer) clearTimeout(pressTimer);
+                    });
+
+                    // 长按事件（触摸）
+                    cell.addEventListener('touchstart', (e) => {
+                        isLongPress = false;
+                        if (pressTimer) clearTimeout(pressTimer);
+                        pressTimer = setTimeout(() => {
+                            isLongPress = true;
+                            addHint(board[r][c]);
+                        }, LONG_PRESS_DURATION);
+                    }, {passive: true});
+                    cell.addEventListener('touchend', () => {
+                        if (pressTimer) clearTimeout(pressTimer);
+                    });
+                    cell.addEventListener('touchcancel', () => {
+                        if (pressTimer) clearTimeout(pressTimer);
+                    });
+
                     gridEl.appendChild(cell);
                 }
             }
@@ -894,32 +1045,25 @@
             return result;
         }
 
-        // --- 终极画线修复：彻底摒弃绝对定位，使用纯相对计算 ---
+        // --- 画线动画 ---
         function drawLineAnimation(rawPath, isValid) {
             const path = simplifyPath(rawPath);
             
-            // 每次画线前，强制重新获取一次物理像素比和尺寸，并重置变换矩阵
             syncCanvasSize();
             const dpr = window.devicePixelRatio || 1;
             
-            // 重置状态，清空画布
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
             
-            // 获取网格容器的相对几何属性
             const gridW = gridEl.offsetWidth;
             const style = window.getComputedStyle(gridEl);
             const pad = parseFloat(style.paddingLeft) || 0;
             const gap = parseFloat(style.gap) || 0;
             
-            // 推算单个格子的实际宽度
             const cellSize = (gridW - pad * 2 - gap * (currentSize - 1)) / currentSize;
-
-            // 因为 CSS 中 Canvas 向外偏移了 -40px，相对坐标需要补偿这 40px
             const offset = 40;
             
             const getPixelPos = (r, c) => {
-                // 计算格子中心点相对 Canvas 的偏移
                 const x = offset + pad + c * (cellSize + gap) + cellSize / 2;
                 const y = offset + pad + r * (cellSize + gap) + cellSize / 2;
                 return { x, y };
@@ -941,7 +1085,6 @@
             }
             ctx.stroke();
 
-            // 400ms 后清理画布，恢复默认状态
             setTimeout(() => { 
                 ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 ctx.clearRect(0, 0, canvasEl.width, canvasEl.height); 
@@ -1208,6 +1351,7 @@
             isProcessing = false;
             errorCount = 0;
             errorCountEl.textContent = '0';
+            hintListEl.innerHTML = ''; // 重置提示框
             
             renderBoard();
             updateButtonStates();
