@@ -195,7 +195,8 @@
             align-items: center; 
             width: 100%;
             min-height: 0; 
-            overflow: hidden; 
+            /* 核心：默认允许自由滚动 */
+            overflow: auto; 
             gap: 2vmin; 
             transition: all 0.3s;
             position: relative;
@@ -271,12 +272,10 @@
            ========================================================= */
         .cube-board-wrapper {
             display: none;
-            /* 核心：直接强制正方形 */
+            /* 强制 1:1 比例 */
             aspect-ratio: 1 / 1; 
             flex-shrink: 0;
-            /* 尺寸完全依赖 JS 设置具体的像素，这里只给个基础 */
-            width: 100%; 
-            height: auto;
+            position: relative;
         }
         
         body.cube-mode .wall-dom { display: none; }
@@ -286,7 +285,6 @@
         /* 坐标轴网格布局 */
         .cube-inner-wrapper {
             display: grid;
-            /* 留出坐标轴的位置 */
             grid-template-columns: 24px 1fr; 
             grid-template-rows: 24px 1fr;
             width: 100%;
@@ -297,20 +295,19 @@
         .axis-top { grid-area: 1 / 2; position: relative; }
         .axis-left { grid-area: 2 / 1; position: relative; }
 
-        /* 核心画布 */
+        /* 核心画布，严格无内边距边框 */
         .main-canvas {
             grid-area: 2 / 2;
-            width: 100%;
-            height: 100%;
-            background: #000; 
-            border: 1px solid #475569; 
             display: block;
+            background: #000; 
+            border: none;
+            padding: 0;
+            margin: 0;
         }
 
         .axis-canvas {
             position: absolute;
             top: 0; left: 0;
-            width: 100%; height: 100%;
         }
 
         /* =========================================================
@@ -324,7 +321,6 @@
                 max-width: 48%;
             }
             .cube-board-wrapper {
-                /* 高度占满 */
                 height: 90%;
                 width: auto;
             }
@@ -367,17 +363,19 @@
             body:not(.is-mini).is-fullscreen .game-container { flex-direction: column; gap: 2vh; }
             body:not(.is-mini).is-fullscreen .wall-dom { width: 100%; max-width: min(100%, 45vh); height: auto; margin: 0 auto; }
 
-            /* 竖屏魔方模式 */
             body.cube-mode .game-container {
                 flex-direction: column;
                 gap: 15px;
                 align-items: center;
                 overflow-y: auto;
+                padding: 10px 15px;
+                box-sizing: border-box;
             }
             .cube-board-wrapper {
-                /* 宽度占满 */
-                width: 90%;
+                width: 100%;
+                max-width: 100%;
                 height: auto;
+                margin: 0 auto; 
             }
         }
 
@@ -865,54 +863,65 @@
         }
 
         // ==========================================
-        // Canvas 渲染逻辑（终极精准绝对正方形）
+        // Canvas 渲染逻辑
         // ==========================================
         function resizeCanvas() {
             if (!isCubeMode) return;
             
-            // 获取外层最大可用正方形边长
-            const wrapper = document.getElementById('cube-left-wrapper');
-            const rect = wrapper.getBoundingClientRect();
-            // 取最短边作为绝对正方形
-            const size = Math.min(rect.width, rect.height);
-            if (size <= 0) return;
+            const wrapperLeft = document.getElementById('cube-left-wrapper');
+            const wrapperRight = document.getElementById('cube-right-wrapper');
+            
+            const wLeft = wrapperLeft.clientWidth;
+            const hLeft = wrapperLeft.clientHeight;
+            const wRight = wrapperRight.clientWidth;
+            const hRight = wrapperRight.clientHeight;
+            
+            // 计算可用的最大正方形边长（减去 24px 的坐标轴）
+            const maxSizeLeft = Math.floor(Math.min(wLeft - 24, hLeft - 24));
+            const maxSizeRight = Math.floor(Math.min(wRight - 24, hRight - 24));
+            
+            if (maxSizeLeft <= 0 || maxSizeRight <= 0) return;
+
+            // 计算每个格子的整数像素大小
+            cellSize = Math.floor(Math.min(maxSizeLeft, maxSizeRight) / settingsCube.size);
+            
+            // 真实网格的实际尺寸（绝对准确，无多余留白）
+            const gridSize = cellSize * settingsCube.size;
             
             const dpr = window.devicePixelRatio || 1;
             
-            // 强制主画布的物理宽高一致
-            canvasLeft.width = Math.floor(size * dpr);
-            canvasLeft.height = Math.floor(size * dpr);
-            canvasRight.width = Math.floor(size * dpr);
-            canvasRight.height = Math.floor(size * dpr);
+            // 设置主画布的 CSS 宽高为真实网格大小
+            canvasLeft.style.width = gridSize + 'px';
+            canvasLeft.style.height = gridSize + 'px';
+            canvasLeft.width = Math.floor(gridSize * dpr);
+            canvasLeft.height = Math.floor(gridSize * dpr);
             
-            // 强制CSS宽高一致
-            canvasLeft.style.width = `${size}px`;
-            canvasLeft.style.height = `${size}px`;
-            canvasRight.style.width = `${size}px`;
-            canvasRight.style.height = `${size}px`;
-
-            ctxLeft.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctxRight.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-            const topRect = axisTopLeft.getBoundingClientRect();
-            const leftRect = axisLeftLeft.getBoundingClientRect();
+            canvasRight.style.width = gridSize + 'px';
+            canvasRight.style.height = gridSize + 'px';
+            canvasRight.width = Math.floor(gridSize * dpr);
+            canvasRight.height = Math.floor(gridSize * dpr);
             
-            axisTopLeft.width = topRect.width * dpr;
-            axisTopLeft.height = topRect.height * dpr;
-            axisTopRight.width = topRect.width * dpr;
-            axisTopRight.height = topRect.height * dpr;
+            // 设置坐标轴的 CSS 宽高
+            const axisSize = 24;
+            axisTopLeft.style.width = gridSize + 'px';
+            axisTopLeft.style.height = axisSize + 'px';
+            axisTopLeft.width = Math.floor(gridSize * dpr);
+            axisTopLeft.height = Math.floor(axisSize * dpr);
             
-            axisLeftLeft.width = leftRect.width * dpr;
-            axisLeftLeft.height = leftRect.height * dpr;
-            axisLeftRight.width = leftRect.width * dpr;
-            axisLeftRight.height = leftRect.height * dpr;
-
-            ctxAxisTopLeft.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctxAxisTopRight.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctxAxisLeftLeft.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctxAxisLeftRight.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-            cellSize = size / settingsCube.size; // 逻辑像素大小，用于点击
+            axisTopRight.style.width = gridSize + 'px';
+            axisTopRight.style.height = axisSize + 'px';
+            axisTopRight.width = Math.floor(gridSize * dpr);
+            axisTopRight.height = Math.floor(axisSize * dpr);
+            
+            axisLeftLeft.style.width = axisSize + 'px';
+            axisLeftLeft.style.height = gridSize + 'px';
+            axisLeftLeft.width = Math.floor(axisSize * dpr);
+            axisLeftLeft.height = Math.floor(gridSize * dpr);
+            
+            axisLeftRight.style.width = axisSize + 'px';
+            axisLeftRight.style.height = gridSize + 'px';
+            axisLeftRight.width = Math.floor(axisSize * dpr);
+            axisLeftRight.height = Math.floor(gridSize * dpr);
 
             drawCubeBoard();
             drawAxes();
@@ -921,18 +930,22 @@
         function drawAxes() {
             if (!isCubeMode) return;
             
-            const topW = axisTopLeft.width / (window.devicePixelRatio || 1);
-            const topH = axisTopLeft.height / (window.devicePixelRatio || 1);
-            const leftW = axisLeftLeft.width / (window.devicePixelRatio || 1);
-            const leftH = axisLeftLeft.height / (window.devicePixelRatio || 1);
+            const cols = settingsCube.size;
 
-            ctxAxisTopLeft.clearRect(0, 0, topW, topH);
-            ctxAxisTopRight.clearRect(0, 0, topW, topH);
-            ctxAxisLeftLeft.clearRect(0, 0, leftW, leftH);
-            ctxAxisLeftRight.clearRect(0, 0, leftW, leftH);
+            ctxAxisTopLeft.setTransform(1, 0, 0, 1, 0, 0);
+            ctxAxisTopRight.setTransform(1, 0, 0, 1, 0, 0);
+            ctxAxisLeftLeft.setTransform(1, 0, 0, 1, 0, 0);
+            ctxAxisLeftRight.setTransform(1, 0, 0, 1, 0, 0);
 
-            const fontSize = Math.max(8, Math.min(12, cellSize * 0.6));
-            ctxAxisTopLeft.font = `${fontSize}px monospace`;
+            ctxAxisTopLeft.clearRect(0, 0, axisTopLeft.width, axisTopLeft.height);
+            ctxAxisTopRight.clearRect(0, 0, axisTopRight.width, axisTopRight.height);
+            ctxAxisLeftLeft.clearRect(0, 0, axisLeftLeft.width, axisLeftLeft.height);
+            ctxAxisLeftRight.clearRect(0, 0, axisLeftRight.width, axisLeftRight.height);
+
+            const fontSize = Math.max(10, Math.min(16, cellSize * 0.6));
+            const dpr = window.devicePixelRatio || 1;
+            
+            ctxAxisTopLeft.font = `${fontSize * dpr}px monospace`;
             ctxAxisTopLeft.fillStyle = '#cbd5e1';
             ctxAxisTopLeft.textAlign = 'center';
             ctxAxisTopLeft.textBaseline = 'middle';
@@ -952,61 +965,63 @@
             ctxAxisLeftRight.textAlign = ctxAxisLeftLeft.textAlign;
             ctxAxisLeftRight.textBaseline = ctxAxisLeftLeft.textBaseline;
 
-            const isLarge = settingsCube.size > 20;
+            const isLarge = cols > 20;
 
-            for (let i = 0; i < settingsCube.size; i++) {
-                const x = i * cellSize + cellSize / 2;
+            // 绘制顶部列号
+            for (let i = 0; i < cols; i++) {
+                const x = i * cellSize * dpr + (cellSize * dpr) / 2;
                 const val = i + 1;
                 
                 if (!isLarge) {
-                    ctxAxisTopLeft.fillText(val, x, topH / 2);
-                    ctxAxisTopRight.fillText(val, x, topH / 2);
+                    ctxAxisTopLeft.fillText(val, x, axisTopLeft.height / 2);
+                    ctxAxisTopRight.fillText(val, x, axisTopRight.height / 2);
                 } else {
                     if (val === 1 || val % 10 === 1) {
-                        ctxAxisTopLeft.fillText(val, x, topH / 2 + 2);
-                        ctxAxisTopRight.fillText(val, x, topH / 2 + 2);
+                        ctxAxisTopLeft.fillText(val, x, axisTopLeft.height / 2);
+                        ctxAxisTopRight.fillText(val, x, axisTopRight.height / 2);
                     } else {
                         ctxAxisTopLeft.beginPath();
-                        ctxAxisTopLeft.moveTo(x, topH - 4);
-                        ctxAxisTopLeft.lineTo(x, topH);
+                        ctxAxisTopLeft.moveTo(x, axisTopLeft.height - 4 * dpr);
+                        ctxAxisTopLeft.lineTo(x, axisTopLeft.height);
                         ctxAxisTopLeft.strokeStyle = '#64748b';
-                        ctxAxisTopLeft.lineWidth = 1;
+                        ctxAxisTopLeft.lineWidth = 1 * dpr;
                         ctxAxisTopLeft.stroke();
                         
                         ctxAxisTopRight.beginPath();
-                        ctxAxisTopRight.moveTo(x, topH - 4);
-                        ctxAxisTopRight.lineTo(x, topH);
+                        ctxAxisTopRight.moveTo(x, axisTopRight.height - 4 * dpr);
+                        ctxAxisTopRight.lineTo(x, axisTopRight.height);
                         ctxAxisTopRight.strokeStyle = '#64748b';
-                        ctxAxisTopRight.lineWidth = 1;
+                        ctxAxisTopRight.lineWidth = 1 * dpr;
                         ctxAxisTopRight.stroke();
                     }
                 }
             }
 
-            for (let i = 0; i < settingsCube.size; i++) {
-                const y = i * cellSize + cellSize / 2;
+            // 绘制左侧行号
+            for (let i = 0; i < cols; i++) {
+                const y = i * cellSize * dpr + (cellSize * dpr) / 2;
                 const val = i + 1;
                 
                 if (!isLarge) {
-                    ctxAxisLeftLeft.fillText(val, leftW / 2, y);
-                    ctxAxisLeftRight.fillText(val, leftW / 2, y);
+                    ctxAxisLeftLeft.fillText(val, axisLeftLeft.width / 2, y);
+                    ctxAxisLeftRight.fillText(val, axisLeftRight.width / 2, y);
                 } else {
                     if (val === 1 || val % 10 === 1) {
-                        ctxAxisLeftLeft.fillText(val, leftW / 2, y);
-                        ctxAxisLeftRight.fillText(val, leftW / 2, y);
+                        ctxAxisLeftLeft.fillText(val, axisLeftLeft.width / 2, y);
+                        ctxAxisLeftRight.fillText(val, axisLeftRight.width / 2, y);
                     } else {
                         ctxAxisLeftLeft.beginPath();
-                        ctxAxisLeftLeft.moveTo(leftW - 4, y);
-                        ctxAxisLeftLeft.lineTo(leftW, y);
+                        ctxAxisLeftLeft.moveTo(axisLeftLeft.width - 4 * dpr, y);
+                        ctxAxisLeftLeft.lineTo(axisLeftLeft.width, y);
                         ctxAxisLeftLeft.strokeStyle = '#64748b';
-                        ctxAxisLeftLeft.lineWidth = 1;
+                        ctxAxisLeftLeft.lineWidth = 1 * dpr;
                         ctxAxisLeftLeft.stroke();
                         
                         ctxAxisLeftRight.beginPath();
-                        ctxAxisLeftRight.moveTo(leftW - 4, y);
-                        ctxAxisLeftRight.lineTo(leftW, y);
+                        ctxAxisLeftRight.moveTo(axisLeftRight.width - 4 * dpr, y);
+                        ctxAxisLeftRight.lineTo(axisLeftRight.width, y);
                         ctxAxisLeftRight.strokeStyle = '#64748b';
-                        ctxAxisLeftRight.lineWidth = 1;
+                        ctxAxisLeftRight.lineWidth = 1 * dpr;
                         ctxAxisLeftRight.stroke();
                     }
                 }
@@ -1018,111 +1033,91 @@
             
             const physicalW = canvasLeft.width;
             const physicalH = canvasLeft.height;
+            const dpr = window.devicePixelRatio || 1;
             
-            // 使用 1:1 物理坐标系绘制，避免 DPR 引起的模糊与缝隙
             ctxLeft.setTransform(1, 0, 0, 1, 0, 0);
             ctxRight.setTransform(1, 0, 0, 1, 0, 0);
             
-            // 纯黑背景
             ctxLeft.fillStyle = '#000000';
             ctxLeft.fillRect(0, 0, physicalW, physicalH);
             ctxRight.fillStyle = '#000000';
             ctxRight.fillRect(0, 0, physicalW, physicalH);
 
-            // 核心：整数均匀分配算法
             const cols = settingsCube.size;
-            const rows = settingsCube.size;
+            const pCell = cellSize * dpr;
             
-            const xCoords = new Array(cols + 1);
-            const yCoords = new Array(rows + 1);
-            
-            const baseW = Math.floor(physicalW / cols);
-            const remainderW = physicalW % cols;
-            
-            let currentX = 0;
-            for (let i = 0; i <= cols; i++) {
-                xCoords[i] = currentX;
-                currentX += (i < remainderW) ? baseW + 1 : baseW;
-            }
-            
-            const baseH = Math.floor(physicalH / rows);
-            const remainderH = physicalH % rows;
-            
-            let currentY = 0;
-            for (let i = 0; i <= rows; i++) {
-                yCoords[i] = currentY;
-                currentY += (i < remainderH) ? baseH + 1 : baseH;
-            }
+            // 【关键修复】：如果格子极小，则取消缝隙，让填充色无缝填满，防止白格被黑色缝隙挤没
+            const lineWidth = cellSize > 3 ? Math.max(1, Math.floor(1 * dpr)) : 0;
 
             for (let i = 0; i < state.grid.length; i++) {
                 const b = state.grid[i];
                 const row = Math.floor(i / cols);
                 const col = i % cols;
                 
-                const px = xCoords[col];
-                const py = yCoords[row];
-                const wRect = xCoords[col+1] - px;
-                const hRect = yCoords[row+1] - py;
+                const px = col * pCell;
+                const py = row * pCell;
                 
-                // 留出 1 物理像素作为黑线
-                const fillW = wRect - 1;
-                const fillH = hRect - 1;
+                const fillW = pCell - lineWidth;
+                const fillH = pCell - lineWidth;
 
-                if (b.left.color) {
-                    ctxLeft.fillStyle = b.left.color;
+                let fillColorLeft = b.left.color;
+                let fillColorRight = b.right.color;
+                
+                if (state.isShowingAnswer) {
+                    if (b.isDifferent) {
+                        fillColorLeft = '#000000';
+                        fillColorRight = '#000000';
+                    }
+                } else if (state.selectedIds.includes(b.id)) {
+                    fillColorLeft = '#FFFFFF';
+                    fillColorRight = '#FFFFFF';
+                }
+
+                if (fillColorLeft) {
+                    ctxLeft.fillStyle = fillColorLeft;
                     ctxLeft.fillRect(px, py, fillW, fillH);
                 }
 
-                if (b.right.color) {
-                    ctxRight.fillStyle = b.right.color;
+                if (fillColorRight) {
+                    ctxRight.fillStyle = fillColorRight;
                     ctxRight.fillRect(px, py, fillW, fillH);
                 }
                 
-                // 状态高亮
-                if (b.found || state.selectedIds.includes(b.id) || (state.isShowingAnswer && b.isDifferent)) {
-                    let strokeColor = '';
-                    if (b.found) strokeColor = '#4ade80';
-                    else if (state.selectedIds.includes(b.id)) strokeColor = '#facc15';
-                    else if (state.isShowingAnswer && b.isDifferent) strokeColor = '#3b82f6';
-                    
-                    // 高亮框宽度 3 个物理像素
-                    ctxLeft.strokeStyle = strokeColor;
-                    ctxLeft.lineWidth = 3;
-                    ctxLeft.strokeRect(px + 1.5, py + 1.5, wRect - 4, hRect - 4);
-                    
-                    ctxRight.strokeStyle = strokeColor;
-                    ctxRight.lineWidth = 3;
-                    ctxRight.strokeRect(px + 1.5, py + 1.5, wRect - 4, hRect - 4);
+                // 显示答案时不画高亮框，退出答案时正常画
+                if (!state.isShowingAnswer) {
+                    // 极小格子下白块已极其醒目，再画描边反而会挤成一团，故增加尺寸判断
+                    if (cellSize > 6 && (b.found || state.selectedIds.includes(b.id))) {
+                        let strokeColor = '';
+                        if (b.found) strokeColor = '#4ade80';
+                        else if (state.selectedIds.includes(b.id)) strokeColor = '#facc15';
+                        
+                        ctxLeft.strokeStyle = strokeColor;
+                        ctxLeft.lineWidth = 2 * dpr;
+                        ctxLeft.strokeRect(px + 1 * dpr, py + 1 * dpr, fillW - 2 * dpr, fillH - 2 * dpr);
+                        
+                        ctxRight.strokeStyle = strokeColor;
+                        ctxRight.lineWidth = 2 * dpr;
+                        ctxRight.strokeRect(px + 1 * dpr, py + 1 * dpr, fillW - 2 * dpr, fillH - 2 * dpr);
+                    }
                 }
             }
-            
-            // 恢复 DPR 比例
-            const dpr = window.devicePixelRatio || 1;
-            ctxLeft.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctxRight.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
 
-        // Canvas 点击事件
+        // 修复点击定位：直接基于真实的 offsetX 计算
         canvasLeft.addEventListener('click', (e) => {
-            const rect = canvasLeft.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const col = Math.floor(x / cellSize);
-            const row = Math.floor(y / cellSize);
+            const col = Math.floor(e.offsetX / cellSize);
+            const row = Math.floor(e.offsetY / cellSize);
             const id = row * settingsCube.size + col;
-            if (id >= 0 && id < state.grid.length) {
+            if (id >= 0 && id < state.grid.length && col >= 0 && col < settingsCube.size && row >= 0 && row < settingsCube.size) {
                 handleBlockClick(state.grid[id], 'left', null);
             }
         });
 
         canvasRight.addEventListener('click', (e) => {
-            const rect = canvasRight.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const col = Math.floor(x / cellSize);
-            const row = Math.floor(y / cellSize);
+            const col = Math.floor(e.offsetX / cellSize);
+            const row = Math.floor(e.offsetY / cellSize);
             const id = row * settingsCube.size + col;
-            if (id >= 0 && id < state.grid.length) {
+            if (id >= 0 && id < state.grid.length && col >= 0 && col < settingsCube.size && row >= 0 && row < settingsCube.size) {
                 handleBlockClick(state.grid[id], 'right', null);
             }
         });
