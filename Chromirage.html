@@ -191,13 +191,13 @@
         .board-wrapper {
             position: relative;
             width: 100%;
-            padding-top: 100%; 
+            aspect-ratio: 1 / 1; 
             background: var(--panel-bg);
             border-radius: var(--border-radius);
+            padding: 6px; 
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.05);
             border: 2px solid rgba(255, 255, 255, 0.1);
             touch-action: none;
-            overflow: hidden; 
         }
 
         .board-wrapper.active {
@@ -206,20 +206,19 @@
         }
 
         canvas {
-            position: absolute;
-            top: 0; left: 0;
             width: 100%; height: 100%;
-            border-radius: 6px; display: block;
-            cursor: grab;
+            display: block;
+            border-radius: 0; 
             background-color: #ffffff; 
+            cursor: grab;
         }
         canvas:active { cursor: grabbing; }
 
         .target-wrapper {
             width: 55%; 
+            aspect-ratio: 1 / 1;
             position: relative; 
             margin-top: 20px;
-            padding-top: 55%; 
         }
 
         .controls {
@@ -315,6 +314,39 @@
             pointer-events: none; z-index: 1000; white-space: nowrap;
         }
         .toast.show { opacity: 1; }
+        
+        .mode-toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .mode-text {
+            font-size: 14px;
+            color: #888;
+            transition: all 0.3s;
+        }
+        .mode-text.active-drag {
+            color: #DC143C;
+            font-weight: bold;
+        }
+        .mode-text.active-tap {
+            color: #32CD32;
+            font-weight: bold;
+        }
+        /* 滑动模式开关颜色（未选中状态） */
+        .mode-toggle-row .switch .slider {
+            background-color: #DC143C;
+        }
+        /* 点选模式开关颜色（选中状态） */
+        .mode-toggle-row #mode-toggle:checked + .slider {
+            background-color: #32CD32;
+        }
     </style>
 </head>
 <body>
@@ -365,7 +397,6 @@
                     <button class="small-icon-btn" id="undo-btn" title="撤回" disabled>↩️</button>
                     <button class="small-icon-btn" id="redo-btn" title="前进" disabled>↪️</button>
                 </div>
-                <!-- 调整主副对角线顺序：先主(M) 后副(A) -->
                 <div class="axis-controls">
                     <div class="axis-btn" id="axis-h" title="锁定横折痕（上下折叠）">
                         <svg width="18" height="18" viewBox="0 0 16 16">
@@ -401,7 +432,6 @@
             <canvas id="target-canvas"></canvas>
         </div>
 
-        <!-- 调整了按钮的显示顺序 -->
         <div class="controls">
             <button class="action-btn" id="new-btn">
                 <span class="icon" id="new-btn-icon">▶️</span>
@@ -417,7 +447,6 @@
             </button>
         </div>
 
-        <!-- 新增的确认弹窗 -->
         <div class="modal" id="confirm-new-popup">
             <h2>⚠️ 确认提示</h2>
             <p style="text-align:center; margin-bottom: 0;">本局游戏尚未完成，确定要开始新的游戏吗？</p>
@@ -443,13 +472,28 @@
                 <button class="btn" style="margin-left: 10px; padding: 10px 20px;" onclick="closeVictory(false)">下一题</button>
             </div>
         </div>
+        
         <div class="modal" id="rules-popup">
             <h2>📜 游戏规则</h2>
-            <p>1. <b>拖动盘面</b>：决定折痕位置。<br>2. <b>锁定方向</b>：可锁定特定方向折痕。<br>3. <b>双击确认</b>：执行翻折动画。<br>4. <b>辅助开关</b>：隐藏错误色块。<br>5. <b>目标</b>：将彩色盘面折叠成目标图形。</p>
+            <p>
+                <b>滑动模式：</b>拖拽盘面划定折痕，双击确认。<br>
+                <b>点选模式：</b>单击吸附最近的折痕线，长按 0.5 秒想要翻折的那一侧即可。
+            </p>
             <button class="btn" onclick="closeRules()">我知道了</button>
         </div>
+
         <div class="modal" id="settings-popup">
             <h2>⚙️ 自定义设置</h2>
+            
+            <div class="mode-toggle-row">
+                <span class="mode-text active-drag" id="mode-text-drag">滑动模式</span>
+                <label class="switch">
+                    <input type="checkbox" id="mode-toggle">
+                    <span class="slider"></span>
+                </label>
+                <span class="mode-text" id="mode-text-tap">点选模式</span>
+            </div>
+
             <div class="input-group"><label>1️⃣ 颜色种类数目（2-8）</label><input type="number" id="setting-colors" min="2" max="8" value="5"></div>
             <div class="input-group"><label>2️⃣ 盘面规格大小（4-12）</label><input type="number" id="setting-size" min="4" max="12" value="7"></div>
             <div class="input-group"><label>3️⃣ 折叠次数（如 5 或 4-6）</label><input type="text" id="setting-folds" value="4-6"></div>
@@ -460,7 +504,6 @@
         <div class="modal" id="custom-id-popup">
             <h2>🔢 指定题目编号</h2>
             <div class="input-group">
-                <!-- 修改为文本输入，空值，并添加提示 -->
                 <input type="text" id="custom-id-input" maxlength="6" placeholder="请输入1-6位字母和数字构成的字符串" value="">
             </div>
             <div>
@@ -493,6 +536,7 @@
         let colorCount = 5; 
         let foldRangeText = "4-6";
         let isGameStarted = false; 
+        let isTapMode = false; 
 
         let COLORS = ['#FF8C00', '#8A2BE2', '#DC143C', '#FFD700', '#87CEEB', '#00008B', '#FF69B4', '#32CD32'];
 
@@ -519,6 +563,11 @@
         let lastTap = 0;            
         let lockedAxis = null; 
         let showOnlyMatched = false; 
+
+        // 点选模式长按相关变量
+        let pressTimer = null;
+        let pressStartPos = null;
+        let isLongPressing = false;
 
         let isAnimating = false;
         let animationState = { action: null, startTime: 0, duration: 500, onComplete: null };
@@ -549,6 +598,10 @@
         const progressFillEl = document.getElementById('progress-fill');
         const progressTextEl = document.getElementById('progress-text');
 
+        const modeToggle = document.getElementById('mode-toggle');
+        const modeTextDrag = document.getElementById('mode-text-drag');
+        const modeTextTap = document.getElementById('mode-text-tap');
+
         const axisBtns = {
             'H': document.getElementById('axis-h'),
             'V': document.getElementById('axis-v'),
@@ -556,7 +609,20 @@
             'A': document.getElementById('axis-a')
         };
 
-        // --- 编号随机与哈希逻辑 ---
+        modeToggle.addEventListener('change', (e) => {
+            isTapMode = e.target.checked;
+            if (!isTapMode) {
+                modeTextDrag.classList.add('active-drag');
+                modeTextTap.classList.remove('active-tap');
+            } else {
+                modeTextDrag.classList.remove('active-drag');
+                modeTextTap.classList.add('active-tap');
+            }
+            pendingAction = null; 
+            renderGame();
+            showToast(isTapMode ? "已切换至点选模式" : "已切换至滑动模式");
+        });
+
         function getRandomId() {
             const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             const len = Math.floor(Math.random() * 6) + 1;
@@ -576,19 +642,18 @@
             return Math.abs(hash);
         }
 
-        // --- 修复移动端 Canvas 黑屏的核心逻辑 ---
         function resizeCanvases() {
             const dpr = window.devicePixelRatio || 1;
             
             const mainRect = gameCanvas.parentElement.getBoundingClientRect();
-            const mainSize = Math.max(mainRect.width, 300); 
+            const mainSize = Math.max(mainRect.width - 16, 300); 
             if (gameCanvas.width !== Math.floor(mainSize * dpr)) {
                 gameCanvas.width = Math.floor(mainSize * dpr);
                 gameCanvas.height = Math.floor(mainSize * dpr);
             }
 
             const targetRect = targetCanvas.parentElement.getBoundingClientRect();
-            const targetSize = Math.max(targetRect.width, 200);
+            const targetSize = Math.max(targetRect.width - 16, 200);
             if (targetCanvas.width !== Math.floor(targetSize * dpr)) {
                 targetCanvas.width = Math.floor(targetSize * dpr);
                 targetCanvas.height = Math.floor(targetSize * dpr);
@@ -597,35 +662,24 @@
 
         function refreshBothBoards() {
             if (!currentGrid || currentGrid.length === 0) return;
-            
             resizeCanvases();
-            
             drawBoard(ctx, currentGrid, showOnlyMatched ? targetGrid : null);
             drawBoard(tCtx, targetGrid, null);
             renderGame(); 
         }
 
-        window.addEventListener('pageshow', (e) => {
-            setTimeout(resizeAndRefresh, 100);
-        });
+        window.addEventListener('pageshow', () => setTimeout(resizeAndRefresh, 100));
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                setTimeout(resizeAndRefresh, 100);
-            }
+            if (document.visibilityState === 'visible') setTimeout(resizeAndRefresh, 100);
         });
-        window.addEventListener('resize', () => {
-            setTimeout(resizeAndRefresh, 100);
-        });
-        window.addEventListener('orientationchange', () => {
-            setTimeout(resizeAndRefresh, 200);
-        });
+        window.addEventListener('resize', () => setTimeout(resizeAndRefresh, 100));
+        window.addEventListener('orientationchange', () => setTimeout(resizeAndRefresh, 200));
 
         function resizeAndRefresh() {
             resizeCanvases();
             refreshBothBoards();
         }
 
-        // --- 原有逻辑 ---
         matchToggle.addEventListener('change', (e) => {
             showOnlyMatched = e.target.checked;
             refreshBothBoards();
@@ -877,12 +931,25 @@
                     ctx.fillStyle = getColor(2); ctx.fill();
                     ctx.beginPath(); ctx.moveTo(px, py + cellSize); ctx.lineTo(px, py); ctx.lineTo(cx, cy); ctx.closePath();
                     ctx.fillStyle = getColor(3); ctx.fill();
-
-                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)'; ctx.lineWidth = 1;
-                    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + cellSize, py + cellSize); ctx.moveTo(px + cellSize, py); ctx.lineTo(px, py + cellSize); ctx.stroke();
-                    ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(px, py, cellSize, cellSize);
                 }
             }
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#333'; 
+            ctx.lineWidth = Math.max(1, width / 600); 
+            for (let i = 0; i <= N; i++) {
+                const p = i * cellSize;
+                ctx.moveTo(p, 0); ctx.lineTo(p, width);
+                ctx.moveTo(0, p); ctx.lineTo(width, p);
+            }
+            for (let x = 0; x < N; x++) {
+                for (let y = 0; y < N; y++) {
+                    const px = x * cellSize, py = y * cellSize;
+                    ctx.moveTo(px, py); ctx.lineTo(px + cellSize, py + cellSize);
+                    ctx.moveTo(px + cellSize, py); ctx.lineTo(px, py + cellSize);
+                }
+            }
+            ctx.stroke();
         }
 
         function getFoldRegionPath(action) {
@@ -948,30 +1015,34 @@
             const currentAction = isAnimating ? animationState.action : (isDragging ? dragAction : pendingAction);
             
             if (currentAction) {
-                const path = getFoldRegionPath(currentAction);
-                if (isAnimating || pendingAction) {
+                if (currentAction.side) {
+                    const path = getFoldRegionPath(currentAction);
+                    if (isAnimating || pendingAction) {
+                        ctx.beginPath();
+                        if (path.length > 0) {
+                            ctx.moveTo(path[0].x, path[0].y);
+                            for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+                            ctx.closePath();
+                            let alpha = isAnimating ? 0.4 * (1 - animProgress) : 0.15;
+                            ctx.fillStyle = `rgba(255, 69, 0, ${alpha})`; ctx.fill();
+                        }
+                    }
+
+                    ctx.save();
+                    ctx.strokeStyle = '#FF4500'; 
+                    ctx.lineWidth = isAnimating ? (6 + Math.sin(animProgress * Math.PI) * 4) : 5;
+                    if (isAnimating || pendingAction) { ctx.shadowBlur = 20; ctx.shadowColor = '#FF4500'; }
                     ctx.beginPath();
                     if (path.length > 0) {
                         ctx.moveTo(path[0].x, path[0].y);
                         for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
-                        ctx.closePath();
-                        let alpha = isAnimating ? 0.4 * (1 - animProgress) : 0.15;
-                        ctx.fillStyle = `rgba(255, 69, 0, ${alpha})`; ctx.fill();
+                        ctx.closePath(); ctx.stroke();
                     }
+                    ctx.restore();
+                    drawDragHintLine(ctx, currentAction, (isAnimating || pendingAction) ? '#FF4500' : '#ffffff');
+                } else {
+                    drawDragHintLine(ctx, currentAction, '#FF4500');
                 }
-
-                ctx.save();
-                ctx.strokeStyle = '#FF4500'; 
-                ctx.lineWidth = isAnimating ? (6 + Math.sin(animProgress * Math.PI) * 4) : 5;
-                if (isAnimating || pendingAction) { ctx.shadowBlur = 20; ctx.shadowColor = '#FF4500'; }
-                ctx.beginPath();
-                if (path.length > 0) {
-                    ctx.moveTo(path[0].x, path[0].y);
-                    for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
-                    ctx.closePath(); ctx.stroke();
-                }
-                ctx.restore();
-                drawDragHintLine(ctx, currentAction, (isAnimating || pendingAction) ? '#FF4500' : '#ffffff');
             }
         }
 
@@ -1021,6 +1092,168 @@
             return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
         }
 
+        function findNearestFold(mx, my) {
+            const cellSize = gameCanvas.width / N;
+            let minDist = Infinity;
+            let bestAction = null;
+
+            if (!lockedAxis) {
+                let kv = Math.round(mx / cellSize);
+                if (kv > 0 && kv < N) {
+                    let dist = Math.abs(mx - kv * cellSize);
+                    if (dist < minDist) { minDist = dist; bestAction = { axis: 'V', k: kv, side: null }; }
+                }
+                let kh = Math.round(my / cellSize);
+                if (kh > 0 && kh < N) {
+                    let dist = Math.abs(my - kh * cellSize);
+                    if (dist < minDist) { minDist = dist; bestAction = { axis: 'H', k: kh, side: null }; }
+                }
+                let km = Math.round((my - mx) / cellSize);
+                if (km > -N && km < N) {
+                    let dist = Math.abs(my - mx - km * cellSize) / Math.SQRT2;
+                    if (dist < minDist) { minDist = dist; bestAction = { axis: 'M', k: km, side: null }; }
+                }
+                let ka = Math.round((my + mx) / cellSize);
+                if (ka > 0 && ka < 2 * N) {
+                    let dist = Math.abs(my + mx - ka * cellSize) / Math.SQRT2;
+                    if (dist < minDist) { minDist = dist; bestAction = { axis: 'A', k: ka, side: null }; }
+                }
+            } else {
+                if (lockedAxis === 'V') {
+                    let kv = Math.round(mx / cellSize);
+                    if (kv > 0 && kv < N) bestAction = { axis: 'V', k: kv, side: null };
+                } else if (lockedAxis === 'H') {
+                    let kh = Math.round(my / cellSize);
+                    if (kh > 0 && kh < N) bestAction = { axis: 'H', k: kh, side: null };
+                } else if (lockedAxis === 'M') {
+                    let km = Math.round((my - mx) / cellSize);
+                    if (km > -N && km < N) bestAction = { axis: 'M', k: km, side: null };
+                } else if (lockedAxis === 'A') {
+                    let ka = Math.round((my + mx) / cellSize);
+                    if (ka > 0 && ka < 2 * N) bestAction = { axis: 'A', k: ka, side: null };
+                }
+            }
+
+            if (bestAction) {
+                pendingAction = bestAction;
+                renderGame();
+            } else {
+                pendingAction = null;
+                renderGame();
+            }
+        }
+
+        function getSideFromPos(mx, my, action) {
+            const cellSize = gameCanvas.width / N;
+            if (action.axis === 'V') {
+                let kx = action.k * cellSize;
+                return mx < kx ? 'right' : 'left';
+            } else if (action.axis === 'H') {
+                let ky = action.k * cellSize;
+                return my < ky ? 'bottom' : 'top';
+            } else if (action.axis === 'M') {
+                let kx = action.k * cellSize;
+                return (my - mx) < kx ? 'bottom-right' : 'top-left';
+            } else if (action.axis === 'A') {
+                let kx = action.k * cellSize;
+                return (my + mx) < kx ? 'bottom-right' : 'top-left';
+            }
+            return null;
+        }
+
+        // --- 事件处理（统一点击与滑动、长按） ---
+        function startDrag(e) {
+            if (isVictory || isHintMode || isAnimating || !isGameStarted) return;
+            e.preventDefault();
+            
+            const pos = getMousePos(gameCanvas, e);
+            startPos = pos; 
+            currentPos = pos; 
+            dragAction = null;
+
+            if (isTapMode) {
+                // 点选模式：启动长按计时器
+                isLongPressing = false;
+                pressStartPos = pos;
+                if (pressTimer) clearTimeout(pressTimer);
+                pressTimer = setTimeout(() => {
+                    isLongPressing = true;
+                    if (pendingAction) {
+                        let side = getSideFromPos(pressStartPos.x, pressStartPos.y, pendingAction);
+                        if (side) {
+                            pendingAction.side = side;
+                            executePendingAction();
+                        }
+                    }
+                }, 500);
+                return; 
+            }
+            
+            isDragging = true; 
+            hasDragged = false; 
+        }
+
+        function drag(e) {
+            if (isTapMode) {
+                if (pressStartPos && pressTimer) {
+                    const pos = getMousePos(gameCanvas, e);
+                    const dist = Math.hypot(pos.x - pressStartPos.x, pos.y - pressStartPos.y);
+                    if (dist > 15) {
+                        clearTimeout(pressTimer);
+                        pressTimer = null;
+                    }
+                }
+                return;
+            }
+            if (!isDragging) return;
+            e.preventDefault();
+            currentPos = getMousePos(gameCanvas, e);
+            const dist = Math.hypot(currentPos.x - startPos.x, currentPos.y - startPos.y);
+            if (dist > 25) { 
+                hasDragged = true; pendingAction = null; 
+                dragAction = getDragAction(startPos.x, startPos.y, currentPos.x, currentPos.y);
+                renderGame();
+            }
+        }
+
+        function endDrag(e) {
+            if (isVictory || isHintMode || isAnimating || !isGameStarted) return;
+            
+            const pos = getMousePos(gameCanvas, e);
+            
+            if (isTapMode) {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+                if (!isLongPressing && pressStartPos) {
+                    const dist = Math.hypot(pos.x - pressStartPos.x, pos.y - pressStartPos.y);
+                    if (dist < 15) {
+                        // 短按，选择折痕
+                        findNearestFold(pos.x, pos.y);
+                    }
+                }
+                isLongPressing = false;
+                pressStartPos = null;
+                return;
+            }
+
+            if (!isDragging) return;
+            isDragging = false;
+            
+            const dist = Math.hypot(pos.x - startPos.x, pos.y - startPos.y);
+            if (hasDragged && dragAction) {
+                pendingAction = dragAction; renderGame();
+            } else if (dist < 25) {
+                const now = Date.now();
+                if (now - lastTap < 300) {
+                    if (pendingAction) executePendingAction();
+                    lastTap = 0; 
+                } else lastTap = now;
+            }
+            dragAction = null;
+        }
+
         function getDragAction(startX, startY, endX, endY) {
             const dx = endX - startX, dy = endY - startY;
             if (Math.hypot(dx, dy) < 25) return null;
@@ -1031,8 +1264,8 @@
                 const absDx = Math.abs(dx), absDy = Math.abs(dy);
                 if (absDx > 1.5 * absDy) axis = 'V'; 
                 else if (absDy > 1.5 * absDx) axis = 'H'; 
-                else if ((dx > 0 && dy > 0) || (dx < 0 && dy < 0)) axis = 'A'; // 左上到右下对应副对角线 A
-                else axis = 'M'; // 右上到左下对应主对角线 M
+                else if ((dx > 0 && dy > 0) || (dx < 0 && dy < 0)) axis = 'A'; 
+                else axis = 'M'; 
             }
 
             if (axis === 'V') {
@@ -1055,51 +1288,8 @@
             return null;
         }
 
-        function startDrag(e) {
-            if (isVictory || isHintMode || isAnimating || !isGameStarted) return;
-            e.preventDefault();
-            isDragging = true; hasDragged = false; 
-            const pos = getMousePos(gameCanvas, e);
-            startPos = pos; currentPos = pos; dragAction = null;
-        }
-
-        function drag(e) {
-            if (!isDragging) return;
-            e.preventDefault();
-            currentPos = getMousePos(gameCanvas, e);
-            const dist = Math.hypot(currentPos.x - startPos.x, currentPos.y - startPos.y);
-            if (dist > 25) { 
-                hasDragged = true; pendingAction = null; 
-                dragAction = getDragAction(startPos.x, startPos.y, currentPos.x, currentPos.y);
-                renderGame();
-            }
-        }
-
-        function endDrag(e) {
-            if (!isDragging) return;
-            isDragging = false;
-            const pos = getMousePos(gameCanvas, e);
-            const dist = Math.hypot(pos.x - startPos.x, pos.y - startPos.y);
-            if (hasDragged && dragAction) {
-                pendingAction = dragAction; renderGame();
-            } else if (dist < 25) {
-                const now = Date.now();
-                if (now - lastTap < 300) {
-                    if (pendingAction) executePendingAction();
-                    lastTap = 0; 
-                } else lastTap = now;
-            }
-            dragAction = null;
-        }
-
-        gameCanvas.addEventListener('dblclick', (e) => {
-            e.preventDefault();
-            if (isVictory || isHintMode || isAnimating || !isGameStarted) return;
-            if (pendingAction) executePendingAction();
-        });
-
         function executePendingAction() {
-            if (!pendingAction) return;
+            if (!pendingAction || !pendingAction.side) return;
             const action = pendingAction; pendingAction = null;
             startFoldAnimation(action, () => {
                 const nextGrid = applyFold(currentGrid, action);
@@ -1107,6 +1297,7 @@
             });
         }
 
+        gameCanvas.addEventListener('contextmenu', e => e.preventDefault()); // 禁用长按菜单
         gameCanvas.addEventListener('mousedown', startDrag);
         window.addEventListener('mousemove', drag);
         window.addEventListener('mouseup', endDrag);
@@ -1146,23 +1337,14 @@
             });
         }
 
-        // --- 确认弹窗逻辑 ---
         function openConfirmNew() { document.getElementById('confirm-new-popup').classList.add('show'); }
         function closeConfirmNew() { document.getElementById('confirm-new-popup').classList.remove('show'); }
-        function confirmNew() {
-            closeConfirmNew();
-            let nextId = getRandomId();
-            loadLevel(nextId);
-        }
+        function confirmNew() { closeConfirmNew(); loadLevel(getRandomId()); }
 
         function openConfirmReset() { document.getElementById('confirm-reset-popup').classList.add('show'); }
         function closeConfirmReset() { document.getElementById('confirm-reset-popup').classList.remove('show'); }
-        function confirmReset() {
-            closeConfirmReset();
-            resetCurrentLevel();
-        }
+        function confirmReset() { closeConfirmReset(); resetCurrentLevel(); }
 
-        // --- 游戏核心逻辑 ---
         function loadLevel(levelId) {
             isGameStarted = true;
             document.getElementById('new-btn-text').innerText = '新的开始';
@@ -1251,6 +1433,17 @@
             document.getElementById('setting-colors').value = colorCount;
             document.getElementById('setting-size').value = N;
             document.getElementById('setting-folds').value = foldRangeText;
+            modeToggle.checked = isTapMode;
+            
+            // 同步开关样式
+            if (!isTapMode) {
+                modeTextDrag.classList.add('active-drag');
+                modeTextTap.classList.remove('active-tap');
+            } else {
+                modeTextDrag.classList.remove('active-drag');
+                modeTextTap.classList.add('active-tap');
+            }
+
             settingsPopup.classList.add('show');
         }
 
@@ -1271,7 +1464,7 @@
 
         function openCustomPopup() {
             if (isAnimating) return;
-            customIdInput.value = ''; // 清空
+            customIdInput.value = '';
             customIdPopup.classList.add('show');
         }
         function closeCustomPopup() { customIdPopup.classList.remove('show'); }
@@ -1422,7 +1615,6 @@
         settingsBtn.addEventListener('click', openSettings);
         cameraBtn.addEventListener('click', () => { if (isAnimating) return; imageImportPopup.classList.add('show'); });
         
-        // 新的“开始/重置”拦截逻辑
         document.getElementById('reset-btn').addEventListener('click', () => {
             if (isGameStarted) openConfirmReset();
         });
