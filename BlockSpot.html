@@ -195,7 +195,6 @@
             align-items: center; 
             width: 100%;
             min-height: 0; 
-            /* 核心：默认允许自由滚动 */
             overflow: auto; 
             gap: 2vmin; 
             transition: all 0.3s;
@@ -216,7 +215,6 @@
             flex-shrink: 0; 
         }
 
-        /* --- 正常模式：玻璃罩容器 --- */
         .block {
             position: relative;
             background: var(--block-bg);
@@ -272,7 +270,6 @@
            ========================================================= */
         .cube-board-wrapper {
             display: none;
-            /* 强制 1:1 比例 */
             aspect-ratio: 1 / 1; 
             flex-shrink: 0;
             position: relative;
@@ -303,7 +300,9 @@
             border: none;
             padding: 0;
             margin: 0;
+            cursor: grab;
         }
+        .main-canvas:active { cursor: grabbing; }
 
         .axis-canvas {
             position: absolute;
@@ -320,9 +319,23 @@
                 width: auto;
                 max-width: 48%;
             }
-            .cube-board-wrapper {
+            
+            /* 魔方模式横屏：模拟图2完美居中 */
+            body.cube-mode .game-container {
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                gap: 4vw;
+                padding: 2vh 0;
+                height: 100%;
+                overflow: hidden;
+            }
+            body.cube-mode .cube-board-wrapper {
                 height: 90%;
                 width: auto;
+                max-height: 100%;
+                flex-shrink: 0;
+                aspect-ratio: 1 / 1;
             }
         }
 
@@ -363,19 +376,22 @@
             body:not(.is-mini).is-fullscreen .game-container { flex-direction: column; gap: 2vh; }
             body:not(.is-mini).is-fullscreen .wall-dom { width: 100%; max-width: min(100%, 45vh); height: auto; margin: 0 auto; }
 
+            /* 魔方模式竖屏 */
             body.cube-mode .game-container {
                 flex-direction: column;
-                gap: 15px;
+                justify-content: center;
                 align-items: center;
-                overflow-y: auto;
-                padding: 10px 15px;
-                box-sizing: border-box;
+                gap: 2vh;
+                padding: 2vh 0;
+                height: 100%;
+                overflow: hidden;
             }
-            .cube-board-wrapper {
-                width: 100%;
-                max-width: 100%;
+            body.cube-mode .cube-board-wrapper {
+                width: 90%;
                 height: auto;
-                margin: 0 auto; 
+                max-width: 100%;
+                flex-shrink: 0;
+                aspect-ratio: 1 / 1;
             }
         }
 
@@ -653,7 +669,11 @@
             isPractice: false, 
             selectedIds: [], 
             isShowingAnswer: false,
-            hasActiveGame: false
+            hasActiveGame: false,
+            // 缩放与平移状态
+            zoom: 1,
+            panX: 0,
+            panY: 0
         };
 
         let timerInterval, secondsElapsed = 0, minutesElapsed = 0;
@@ -793,8 +813,17 @@
                     setColorCountInput.value = settingsCube.colorCount;
                     
                     document.getElementById('help-content').innerHTML = `
-                        <p><strong>隐藏玩法：</strong>找出左右两面魔方墙中隐藏的不同颜色格子。</p>
-                        <ul><li>每个格子是一个纯色正方形，无缝拼接排列。</li><li>不同之处表现为：格子颜色的直接替换。</li></ul>
+                        <p><strong>游戏目标：</strong>在左右两面魔方墙中，找出隐藏的不同颜色的格子。</p>
+                        <p><strong>盘面说明：</strong>左右两面墙在相同位置本应完全一致，但其中部分格子的颜色被替换了，请找出它们。</p>
+                        <p><strong>操作指南：</strong></p>
+                        <ul>
+                            <li><strong>寻找不同：</strong>直接点击左右任意一面墙上的不同处（点击左墙或右墙均有效）。</li>
+                            <li><strong>全屏：</strong>点击左上角图标可切换全屏，全屏模式下支持<strong>双指捏合缩放、单指拖动</strong>来观察细节。</li>
+                            <li><strong>设置：</strong>点击左上角齿轮图标调整盘面大小、颜色种类及挑战/练习模式。</li>
+                            <li><strong>帮助：</strong>点击右上角问号图标查看本规则。</li>
+                            <li><strong>锁定：</strong>点击右上角锁图标可锁定屏幕，防止误触（锁定后无法缩放和滑动）。</li>
+                            <li><strong>查看答案：</strong>练习模式下，右上角会显示灯泡图标，点击可将所有不同处标黑。</li>
+                        </ul>
                     `;
                     resetBoardToEmpty();
                 }
@@ -876,21 +905,15 @@
             const wRight = wrapperRight.clientWidth;
             const hRight = wrapperRight.clientHeight;
             
-            // 计算可用的最大正方形边长（减去 24px 的坐标轴）
             const maxSizeLeft = Math.floor(Math.min(wLeft - 24, hLeft - 24));
             const maxSizeRight = Math.floor(Math.min(wRight - 24, hRight - 24));
             
             if (maxSizeLeft <= 0 || maxSizeRight <= 0) return;
 
-            // 计算每个格子的整数像素大小
-            cellSize = Math.floor(Math.min(maxSizeLeft, maxSizeRight) / settingsCube.size);
-            
-            // 真实网格的实际尺寸（绝对准确，无多余留白）
+            cellSize = Math.max(1, Math.floor(Math.min(maxSizeLeft, maxSizeRight) / settingsCube.size));
             const gridSize = cellSize * settingsCube.size;
-            
             const dpr = window.devicePixelRatio || 1;
             
-            // 设置主画布的 CSS 宽高为真实网格大小
             canvasLeft.style.width = gridSize + 'px';
             canvasLeft.style.height = gridSize + 'px';
             canvasLeft.width = Math.floor(gridSize * dpr);
@@ -901,7 +924,6 @@
             canvasRight.width = Math.floor(gridSize * dpr);
             canvasRight.height = Math.floor(gridSize * dpr);
             
-            // 设置坐标轴的 CSS 宽高
             const axisSize = 24;
             axisTopLeft.style.width = gridSize + 'px';
             axisTopLeft.style.height = axisSize + 'px';
@@ -922,6 +944,9 @@
             axisLeftRight.style.height = gridSize + 'px';
             axisLeftRight.width = Math.floor(axisSize * dpr);
             axisLeftRight.height = Math.floor(gridSize * dpr);
+
+            // 应用边界限制（防止屏幕缩放时导致画面跑偏）
+            applyPanLimits();
 
             drawCubeBoard();
             drawAxes();
@@ -967,7 +992,6 @@
 
             const isLarge = cols > 20;
 
-            // 绘制顶部列号
             for (let i = 0; i < cols; i++) {
                 const x = i * cellSize * dpr + (cellSize * dpr) / 2;
                 const val = i + 1;
@@ -997,7 +1021,6 @@
                 }
             }
 
-            // 绘制左侧行号
             for (let i = 0; i < cols; i++) {
                 const y = i * cellSize * dpr + (cellSize * dpr) / 2;
                 const val = i + 1;
@@ -1043,10 +1066,18 @@
             ctxRight.fillStyle = '#000000';
             ctxRight.fillRect(0, 0, physicalW, physicalH);
 
+            // 应用缩放与平移（修复：必须乘以 dpr，否则平移量会缩小，导致无法拖到边界）
+            ctxLeft.save();
+            ctxLeft.translate(state.panX * dpr, state.panY * dpr);
+            ctxLeft.scale(state.zoom, state.zoom);
+            
+            ctxRight.save();
+            ctxRight.translate(state.panX * dpr, state.panY * dpr);
+            ctxRight.scale(state.zoom, state.zoom);
+
             const cols = settingsCube.size;
             const pCell = cellSize * dpr;
             
-            // 【关键修复】：如果格子极小，则取消缝隙，让填充色无缝填满，防止白格被黑色缝隙挤没
             const lineWidth = cellSize > 3 ? Math.max(1, Math.floor(1 * dpr)) : 0;
 
             for (let i = 0; i < state.grid.length; i++) {
@@ -1083,9 +1114,7 @@
                     ctxRight.fillRect(px, py, fillW, fillH);
                 }
                 
-                // 显示答案时不画高亮框，退出答案时正常画
                 if (!state.isShowingAnswer) {
-                    // 极小格子下白块已极其醒目，再画描边反而会挤成一团，故增加尺寸判断
                     if (cellSize > 6 && (b.found || state.selectedIds.includes(b.id))) {
                         let strokeColor = '';
                         if (b.found) strokeColor = '#4ade80';
@@ -1101,12 +1130,43 @@
                     }
                 }
             }
+            
+            ctxLeft.restore();
+            ctxRight.restore();
         }
 
-        // 修复点击定位：直接基于真实的 offsetX 计算
+        // 边界限制，防止拖拽露黑边
+        function applyPanLimits() {
+            if (!isCubeMode) return;
+            if (state.zoom <= 1) {
+                state.panX = 0;
+                state.panY = 0;
+                return;
+            }
+            const baseSize = cellSize * settingsCube.size;
+            const scaledSize = baseSize * state.zoom;
+            
+            const minPanX = baseSize - scaledSize;
+            const minPanY = baseSize - scaledSize;
+            
+            if (state.panX > 0) state.panX = 0;
+            if (state.panX < minPanX) state.panX = minPanX;
+            
+            if (state.panY > 0) state.panY = 0;
+            if (state.panY < minPanY) state.panY = minPanY;
+        }
+
+        // 统一管理点击防误触逻辑
+        let hasDragged = false;
+
         canvasLeft.addEventListener('click', (e) => {
-            const col = Math.floor(e.offsetX / cellSize);
-            const row = Math.floor(e.offsetY / cellSize);
+            if (!isCubeMode) return;
+            if (hasDragged) { hasDragged = false; return; }
+            
+            const realX = (e.offsetX - state.panX) / state.zoom;
+            const realY = (e.offsetY - state.panY) / state.zoom;
+            const col = Math.floor(realX / cellSize);
+            const row = Math.floor(realY / cellSize);
             const id = row * settingsCube.size + col;
             if (id >= 0 && id < state.grid.length && col >= 0 && col < settingsCube.size && row >= 0 && row < settingsCube.size) {
                 handleBlockClick(state.grid[id], 'left', null);
@@ -1114,8 +1174,13 @@
         });
 
         canvasRight.addEventListener('click', (e) => {
-            const col = Math.floor(e.offsetX / cellSize);
-            const row = Math.floor(e.offsetY / cellSize);
+            if (!isCubeMode) return;
+            if (hasDragged) { hasDragged = false; return; }
+            
+            const realX = (e.offsetX - state.panX) / state.zoom;
+            const realY = (e.offsetY - state.panY) / state.zoom;
+            const col = Math.floor(realX / cellSize);
+            const row = Math.floor(realY / cellSize);
             const id = row * settingsCube.size + col;
             if (id >= 0 && id < state.grid.length && col >= 0 && col < settingsCube.size && row >= 0 && row < settingsCube.size) {
                 handleBlockClick(state.grid[id], 'right', null);
@@ -1126,6 +1191,179 @@
             if (isCubeMode) resizeCanvas();
         });
         resizeObserver.observe(document.getElementById('game-container'));
+
+        // ==========================================
+        // 手势操作：双指缩放 + 单指拖拽
+        // ==========================================
+        const gameContainer = document.getElementById('game-container');
+        let interactionMode = null; // 'pan' | 'pinch'
+        
+        let initialPinchDistance = 0;
+        let initialZoom = 1;
+        let startPanX = 0;
+        let startPanY = 0;
+        let startCenterX = 0;
+        let startCenterY = 0;
+        
+        let dragStartX = 0;
+        let dragStartY = 0;
+
+        gameContainer.addEventListener('touchstart', (e) => {
+            if (!isCubeMode || isLocked) return;
+            
+            if (e.touches.length === 1) {
+                if (state.zoom > 1) {
+                    interactionMode = 'pan';
+                    dragStartX = e.touches[0].clientX;
+                    dragStartY = e.touches[0].clientY;
+                    startPanX = state.panX;
+                    startPanY = state.panY;
+                    hasDragged = false;
+                }
+            } else if (e.touches.length === 2) {
+                if (e.cancelable) e.preventDefault();
+                interactionMode = 'pinch';
+                hasDragged = true; 
+                
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                initialPinchDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                initialZoom = state.zoom;
+                startCenterX = (t1.clientX + t2.clientX) / 2;
+                startCenterY = (t1.clientY + t2.clientY) / 2;
+                startPanX = state.panX;
+                startPanY = state.panY;
+            }
+        }, { passive: false });
+
+        gameContainer.addEventListener('touchmove', (e) => {
+            if (!isCubeMode || isLocked) return;
+            
+            if (interactionMode === 'pan' && e.touches.length === 1) {
+                const touch = e.touches[0];
+                const dx = touch.clientX - dragStartX;
+                const dy = touch.clientY - dragStartY;
+                
+                if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                    hasDragged = true;
+                    if (e.cancelable) e.preventDefault(); // 阻止默认滚动
+                }
+                
+                if (hasDragged && state.zoom > 1) {
+                    state.panX = startPanX + dx;
+                    state.panY = startPanY + dy;
+                    applyPanLimits();
+                    drawCubeBoard();
+                }
+            } else if (interactionMode === 'pinch' && e.touches.length === 2) {
+                if (e.cancelable) e.preventDefault();
+                
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                const distance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                
+                if (initialPinchDistance > 0) {
+                    let newZoom = initialZoom * (distance / initialPinchDistance);
+                    newZoom = Math.max(1, Math.min(20, newZoom));
+                    
+                    const newCenterX = (t1.clientX + t2.clientX) / 2;
+                    const newCenterY = (t1.clientY + t2.clientY) / 2;
+                    
+                    const deltaX = newCenterX - startCenterX;
+                    const deltaY = newCenterY - startCenterY;
+                    
+                    const canvasRect = canvasLeft.getBoundingClientRect();
+                    const centerXInCanvas = startCenterX - canvasRect.left;
+                    const centerYInCanvas = startCenterY - canvasRect.top;
+                    
+                    let newPanX = centerXInCanvas - (centerXInCanvas - startPanX) * (newZoom / initialZoom) + deltaX;
+                    let newPanY = centerYInCanvas - (centerYInCanvas - startPanY) * (newZoom / initialZoom) + deltaY;
+                    
+                    state.zoom = newZoom;
+                    state.panX = newPanX;
+                    state.panY = newPanY;
+                    applyPanLimits();
+                    drawCubeBoard();
+                }
+            }
+        }, { passive: false });
+
+        gameContainer.addEventListener('touchend', (e) => {
+            if (!isCubeMode) return;
+            if (e.touches.length < 2 && interactionMode === 'pinch') {
+                interactionMode = null;
+                initialPinchDistance = 0;
+                if (state.zoom < 1.05) {
+                    state.zoom = 1;
+                    state.panX = 0;
+                    state.panY = 0;
+                    drawCubeBoard();
+                }
+            } else if (e.touches.length === 0 && interactionMode === 'pan') {
+                interactionMode = null;
+            }
+        });
+
+        // 桌面端鼠标拖拽支持
+        gameContainer.addEventListener('mousedown', (e) => {
+            if (!isCubeMode || isLocked || e.button !== 0) return;
+            if (state.zoom > 1) {
+                interactionMode = 'pan';
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                startPanX = state.panX;
+                startPanY = state.panY;
+                hasDragged = false;
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (interactionMode !== 'pan' || !isCubeMode) return;
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+            
+            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) hasDragged = true;
+            
+            if (hasDragged && state.zoom > 1) {
+                state.panX = startPanX + dx;
+                state.panY = startPanY + dy;
+                applyPanLimits();
+                drawCubeBoard();
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (interactionMode === 'pan') interactionMode = null;
+        });
+
+        // 桌面端滚轮缩放支持
+        gameContainer.addEventListener('wheel', (e) => {
+            if (!isCubeMode || isLocked) return;
+            e.preventDefault();
+            
+            let newZoom = state.zoom - e.deltaY * 0.002;
+            newZoom = Math.max(1, Math.min(20, newZoom));
+            
+            if (newZoom === 1) {
+                state.zoom = 1;
+                state.panX = 0;
+                state.panY = 0;
+            } else {
+                // 以鼠标位置为中心缩放
+                const canvasRect = canvasLeft.getBoundingClientRect();
+                const isRight = e.clientX > canvasRect.right;
+                const refRect = isRight ? canvasRight.getBoundingClientRect() : canvasRect;
+                
+                const mouseXInCanvas = e.clientX - refRect.left;
+                const mouseYInCanvas = e.clientY - refRect.top;
+                
+                state.panX = mouseXInCanvas - (mouseXInCanvas - state.panX) * (newZoom / state.zoom);
+                state.panY = mouseYInCanvas - (mouseYInCanvas - state.panY) * (newZoom / state.zoom);
+                state.zoom = newZoom;
+                applyPanLimits();
+            }
+            drawCubeBoard();
+        }, { passive: false });
 
         // ==========================================
         // DOM 渲染逻辑（色块模式）
@@ -1180,6 +1418,9 @@
             state.hasActiveGame = false;
             state.isShowingAnswer = false;
             state.selectedIds = [];
+            state.zoom = 1;
+            state.panX = 0;
+            state.panY = 0;
             
             state.found = 0;
             state.mistakes = 0;
@@ -1319,6 +1560,10 @@
             levelIdDisplay.textContent = levelId;
             
             startBtn.innerHTML = '新的开始';
+            
+            state.zoom = 1;
+            state.panX = 0;
+            state.panY = 0;
 
             const active = getActiveSettings();
             const modeStr = isCubeMode ? 'cube' : 'block';
@@ -1421,7 +1666,7 @@
             });
 
             if (isCubeMode) {
-                drawCubeBoard();
+                resizeCanvas();
             } else {
                 renderDomBoard();
             }
