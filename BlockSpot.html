@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>色块寻异</title>
     <style>
         :root {
@@ -35,7 +35,6 @@
             height: 100vh;
             height: 100dvh;
             width: 100vw;
-            overflow: hidden;
         }
 
         /* 顶部固定控制按钮 */
@@ -59,6 +58,7 @@
         .fixed-btn:hover { background: rgba(255, 255, 255, 0.25); }
         #fullscreen-btn { left: 12px; }
         #settings-btn { left: 56px; }
+        #answer-btn { right: 100px; display: none; }
         #help-btn { right: 56px; }
         #lock-btn { right: 12px; }
 
@@ -114,15 +114,22 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 30px;
+            gap: 20px;
             font-size: clamp(14px, 2vh, 20px);
             font-weight: bold;
             font-family: monospace;
             margin-bottom: 8px;
+            min-width: 320px;
         }
 
         .timer { color: #93c5fd; }
         .level-id { color: #fca5a5; }
+        .play-mode-display {
+            color: #a78bfa;
+            padding: 0 10px;
+            border-left: 1px solid #475569;
+            border-right: 1px solid #475569;
+        }
 
         .header {
             display: flex;
@@ -148,17 +155,22 @@
         .text-remaining { color: var(--text-remaining); }
         .text-mistake { color: var(--text-mistake); }
 
+        /* 练习模式隐藏失误 */
+        body.practice-mode .mistake-container {
+            display: none;
+        }
+
         /* --- 全屏模式精简UI --- */
         body.is-fullscreen .top-ui { padding-top: 2px; }
         body.is-fullscreen .game-title,
         body.is-fullscreen .controls { display: none; }
-        body.is-fullscreen .info-bar { font-size: 12px; gap: 15px; margin-bottom: 2px; margin-top: 2px; }
+        body.is-fullscreen .info-bar { font-size: 12px; gap: 10px; margin-bottom: 2px; margin-top: 2px; }
         body.is-fullscreen .header { font-size: 14px; gap: 15px; padding: 2px 20px; margin-bottom: 2px; }
         body.is-fullscreen .header span { font-size: 16px; }
         body.is-fullscreen .game-container { padding: 2px; gap: 1vmin; }
 
         /* =========================================================
-           盘面主体区（公共基础样式）
+           盘面主体区
            ========================================================= */
         .game-container {
             flex: 1;
@@ -168,12 +180,11 @@
             width: 100%;
             min-height: 0;
             padding: 4px;
-            overflow: hidden;
+            overflow: hidden; 
             gap: 2vmin; 
             transition: all 0.3s;
         }
 
-        /* 单面墙基础属性 */
         .wall {
             background: var(--panel-bg);
             border: 1px solid var(--block-border);
@@ -183,13 +194,12 @@
             gap: 0.5vmin; 
             box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
             box-sizing: border-box;
-            aspect-ratio: 1 / 1; /* 强制绝对正方形 */
+            aspect-ratio: 1 / 1; 
             min-width: 0;
             min-height: 0;
             flex-shrink: 0;
         }
 
-        /* 单个魔方块 */
         .block {
             background: var(--block-bg);
             border: 1px solid #3b445c; 
@@ -220,7 +230,18 @@
             pointer-events: none;
         }
 
-        /* 圆点基础样式 */
+        .block.selected {
+            border-color: #facc15;
+            box-shadow: 0 0 8px #facc15;
+        }
+
+        /* 答案层级要高于选择，以便覆盖显示 */
+        .block.show-answer {
+            border-color: #3b82f6;
+            box-shadow: 0 0 8px #3b82f6;
+            z-index: 2;
+        }
+
         .dot {
             border-radius: 50%;
             margin: auto;
@@ -230,7 +251,6 @@
             aspect-ratio: 1 / 1;
         }
 
-        /* 迷你模式专属紧凑样式（公共） */
         body.is-mini .block {
             padding: 0px; 
             gap: 0px;
@@ -243,34 +263,24 @@
             box-shadow: none; 
         }
 
-        /* 放大模式专属圆点样式（公共） */
         body:not(.is-mini) .dot {
             width: 75%; 
             height: 75%;
             box-shadow: inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px rgba(255,255,255,0.15);
         }
 
-
         /* =========================================================
-           横屏专属布局 (Landscape) —— 绝不动摇的参数
+           响应式布局
            ========================================================= */
         @media (orientation: landscape) {
-            .game-container {
-                flex-direction: row;
-            }
-            body:not(.is-mini) .wall {
-                height: 100%;
-                width: auto;
-                max-width: 48%;
-            }
-            body.is-mini .wall {
+            .game-container { flex-direction: row; }
+            body:not(.is-mini) .wall, body.is-mini .wall {
                 height: 100%;
                 width: auto;
                 max-width: 48%;
             }
         }
 
-        /* 针对桌面端大屏幕的迷你模式专属优化 */
         @media (orientation: landscape) and (min-width: 1024px) {
             body.is-mini .wall {
                 height: auto; 
@@ -280,50 +290,19 @@
             }
         }
 
-
-        /* =========================================================
-           竖屏专属布局 (Portrait)
-           ========================================================= */
         @media (orientation: portrait) {
-            /* 【竖屏迷你模式】强制左右并排（绝不动摇） */
-            body.is-mini .game-container {
-                flex-direction: row;
-            }
-            body.is-mini .wall {
-                width: 48%; 
-                height: auto;
-                max-height: 100%; 
-            }
+            body.is-mini .game-container { flex-direction: row; }
+            body.is-mini .wall { width: 48%; height: auto; max-height: 100%; }
 
-            /* 【竖屏放大模式 - 非全屏】完美修复重叠，实现纵向铺满，横向留余地 */
-            body:not(.is-mini):not(.is-fullscreen) .game-container {
-                flex-direction: column;
-                gap: 2vh; /* 两墙间距 */
-            }
-            body:not(.is-mini):not(.is-fullscreen) .wall {
-                flex: 1;           /* 均分可用高度 */
-                height: 0;         /* 触发flex高度计算 */
-                width: auto;       
-                max-width: 90%;    /* 横向留出余地 */
-                margin: 0 auto;
-            }
+            body:not(.is-mini):not(.is-fullscreen) .game-container { flex-direction: column; gap: 2vh; }
+            body:not(.is-mini):not(.is-fullscreen) .wall { flex: 1; height: 0; width: auto; max-width: 90%; margin: 0 auto; }
 
-            /* 【竖屏放大模式 - 全屏】保持之前的准确参数，完全不动 */
-            body:not(.is-mini).is-fullscreen .game-container {
-                flex-direction: column;
-                gap: 2vh; 
-            }
-            body:not(.is-mini).is-fullscreen .wall {
-                width: 100%;
-                max-width: min(100%, 45vh);
-                height: auto;
-                margin: 0 auto; 
-            }
+            body:not(.is-mini).is-fullscreen .game-container { flex-direction: column; gap: 2vh; }
+            body:not(.is-mini).is-fullscreen .wall { width: 100%; max-width: min(100%, 45vh); height: auto; margin: 0 auto; }
         }
 
-
         /* =========================================================
-           以下为各种弹窗、提示框样式
+           弹窗样式
            ========================================================= */
         .modal-overlay {
             position: fixed;
@@ -344,6 +323,8 @@
             color: #e2e8f0;
             width: 400px;
             max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
         }
 
@@ -379,7 +360,6 @@
 
         .form-group input:focus { border-color: #3b82f6; }
 
-        /* --- 拨动开关全新样式 --- */
         .switch-container { display: flex; align-items: center; gap: 8px; font-size: 14px; }
         
         .mode-text {
@@ -389,22 +369,14 @@
             color: #64748b;
             cursor: pointer;
         }
-        .mode-text.active-mini {
-            background-color: rgba(59, 130, 246, 0.2);
-            color: #60a5fa;
-            font-weight: bold;
-        }
-        .mode-text.active-enlarge {
-            background-color: rgba(74, 222, 128, 0.2);
-            color: #4ade80;
-            font-weight: bold;
-        }
+        .mode-text.active-mini { background-color: rgba(59, 130, 246, 0.2); color: #60a5fa; font-weight: bold; }
+        .mode-text.active-enlarge { background-color: rgba(74, 222, 128, 0.2); color: #4ade80; font-weight: bold; }
 
         .switch { position: relative; display: inline-block; width: 46px; height: 24px; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider {
             position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #3b82f6; /* 默认蓝色 */
+            background-color: #3b82f6; 
             transition: .4s; border-radius: 24px;
         }
         .slider:before {
@@ -412,13 +384,12 @@
             left: 3px; bottom: 3px; background-color: white;
             transition: .4s; border-radius: 50%;
         }
-        /* 当勾选时，变为绿色 */
         input:checked + .slider { background-color: #4ade80; }
         input:checked + .slider:before { transform: translateX(22px); }
 
-        .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 25px; }
+        .modal-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 25px; }
         .btn-confirm, .btn-cancel {
-            padding: 8px 20px; border: none; border-radius: 6px;
+            padding: 8px 24px; border: none; border-radius: 6px;
             cursor: pointer; font-size: 15px; font-weight: bold;
         }
         .btn-confirm { background: #3b82f6; color: #fff; }
@@ -443,13 +414,15 @@
         }
     </style>
 </head>
-<body class="is-mini"> <!-- 默认开启迷你模式 -->
+<body class="is-mini">
 
     <div class="fixed-btn" id="fullscreen-btn" title="全屏">⛶</div>
     <div class="fixed-btn" id="settings-btn" title="设置">⚙</div>
+    <div class="fixed-btn" id="answer-btn" title="查看答案">💡</div>
     <div class="fixed-btn" id="help-btn" title="帮助">?</div>
     <div class="fixed-btn" id="lock-btn" title="锁定界面">🔓</div>
 
+    <!-- 设置面板 -->
     <div id="settings-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <h3>⚙️ 游戏设置</h3>
@@ -461,6 +434,10 @@
                 <label>差异块数 (数量或%)</label>
                 <input type="text" id="set-diff" value="12%">
             </div>
+            <div class="form-group">
+                <label>颜色种数 (4-10)</label>
+                <input type="number" id="set-color-count" min="4" max="10" value="8">
+            </div>
             <div class="form-group" style="justify-content: center;">
                 <div class="switch-container">
                     <span id="text-mini" class="mode-text">迷你模式</span>
@@ -468,16 +445,27 @@
                         <input type="checkbox" id="set-mini">
                         <span class="slider"></span>
                     </label>
-                    <span id="text-enlarge" class="mode-text">放大模式</span>
+                    <span id="text-enlarge" class="mode-text">加大模式</span>
+                </div>
+            </div>
+            <div class="form-group" style="justify-content: center;">
+                <div class="switch-container">
+                    <span id="text-challenge" class="mode-text active-mini">挑战模式</span>
+                    <label class="switch">
+                        <input type="checkbox" id="set-practice">
+                        <span class="slider"></span>
+                    </label>
+                    <span id="text-practice" class="mode-text">练习模式</span>
                 </div>
             </div>
             <div class="modal-buttons">
                 <button id="settings-cancel" class="btn-cancel">取消</button>
-                <button id="settings-confirm" class="btn-confirm">保存并开始</button>
+                <button id="settings-confirm" class="btn-confirm">应用</button>
             </div>
         </div>
     </div>
 
+    <!-- 帮助面板 -->
     <div id="help-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <h3>📖 游戏规则与说明</h3>
@@ -486,12 +474,16 @@
                 <ul>
                     <li>每个方块内部是一个 3x3 的小圆点矩阵。</li>
                     <li>不同之处表现为：<strong>颜色的增减</strong> 或 <strong>颜色的替换</strong>（最多2处）。</li>
-                    <li>点击您认为有差异的方块，点击正确会高亮并锁定；点击错误会增加失误次数。</li>
+                </ul>
+                <p><strong>模式说明：</strong></p>
+                <ul>
+                    <li><strong>挑战模式：</strong> 点击方块立刻判断对错，点错累积失误。</li>
+                    <li><strong>练习模式：</strong> 选中方块暂不判断，选满数量后若全对则自动成功。可点击右上角 💡 查看答案。</li>
                 </ul>
                 <p><strong>界面操作：</strong></p>
                 <ul>
                     <li><strong>左上角 ⛶：</strong> 进入/退出全屏。</li>
-                    <li><strong>左上角 ⚙：</strong> 调整盘面大小、差异数量及切换模式。</li>
+                    <li><strong>左上角 ⚙：</strong> 调整盘面参数及模式（修改后需点击“应用”，再点“开始游戏”）。</li>
                     <li><strong>右上角 🔓：</strong> 锁定界面，防止误触。</li>
                 </ul>
             </div>
@@ -501,6 +493,7 @@
         </div>
     </div>
 
+    <!-- 题号输入框 -->
     <div id="modal-overlay" class="modal-overlay hidden">
         <div class="modal-content">
             <h3>请输入题号</h3>
@@ -510,6 +503,17 @@
             <div class="modal-buttons">
                 <button id="modal-cancel" class="btn-cancel">取消</button>
                 <button id="modal-confirm" class="btn-confirm">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自定义通用确认弹窗 -->
+    <div id="confirm-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 id="confirm-text">提示</h3>
+            <div class="modal-buttons">
+                <button id="confirm-cancel" class="btn-cancel">取消</button>
+                <button id="confirm-ok" class="btn-confirm">确定</button>
             </div>
         </div>
     </div>
@@ -526,12 +530,13 @@
         </div>
         <div class="info-bar">
             <div class="timer">计时: <span id="timer-display">00:00</span></div>
+            <div class="play-mode-display" id="play-mode-display">迷你·挑战模式</div>
             <div class="level-id">题号: <span id="level-id-display">------</span></div>
         </div>
         <div class="header">
-            <div>找到 <span id="found-count" class="text-found">0</span></div>
-            <div>剩余 <span id="remaining-count" class="text-remaining">12</span></div>
-            <div>失误 <span id="mistake-count" class="text-mistake">0</span></div>
+            <div><span id="label-found">找到</span> <span id="found-count" class="text-found">0</span></div>
+            <div><span id="label-remaining">剩余</span> <span id="remaining-count" class="text-remaining">12</span></div>
+            <div class="mistake-container">失误 <span id="mistake-count" class="text-mistake">0</span></div>
         </div>
     </div>
 
@@ -541,40 +546,85 @@
     </div>
 
     <script>
-        const COLORS = [
-            '#c0392b', '#d35400', '#d4ac0d', '#27ae60', 
-            '#2980b9', '#17a589', '#8e44ad'
+        const ALL_COLORS = [
+            '#c0392b', '#d35400', '#b8a000', '#27ae60', 
+            '#2980b9', '#17a589', '#8e44ad', '#d53b8f', 
+            '#8b4513', '#7f8c8d'
         ];
         
         let settings = {
             size: 10,
             diffInput: '12%',
-            isMini: true 
+            colorCount: 8,
+            isMini: true,
+            isPractice: false
         };
 
         let state = {
             rows: 10, cols: 10, diffCount: 12,
-            grid: [], found: 0, remaining: 12, mistakes: 0, isPlaying: false
+            grid: [], found: 0, remaining: 12, mistakes: 0, isPlaying: false,
+            isPractice: false, 
+            selectedIds: [], 
+            isShowingAnswer: false,
+            hasActiveGame: false
         };
 
         let timerInterval, secondsElapsed = 0, minutesElapsed = 0;
         let toastTimeout, toastDismissHandler = null;
         let isLocked = false;
+        let rng = Math.random;
+        let confirmAction = null;
 
+        function xmur3(str) {
+            for(var i = 0, h = 1779033703 ^ str.length; i < str.length; i++) {
+                h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+                h = h << 13 | h >>> 19;
+            }
+            return function() {
+                h = Math.imul(h ^ (h >>> 16), 2246822507);
+                h = Math.imul(h ^ (h >>> 13), 3266489909);
+                return (h ^= h >>> 16) >>> 0;
+            }
+        }
+
+        function mulberry32(a) {
+            return function() {
+              var t = a += 0x6D2B79F5;
+              t = Math.imul(t ^ t >>> 15, t | 1);
+              t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+              return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(rng() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // DOM 元素
         const leftWall = document.getElementById('wall-left');
         const rightWall = document.getElementById('wall-right');
         const foundEl = document.getElementById('found-count');
         const remainingEl = document.getElementById('remaining-count');
         const mistakeEl = document.getElementById('mistake-count');
+        const labelFound = document.getElementById('label-found');
+        const labelRemaining = document.getElementById('label-remaining');
         const startBtn = document.getElementById('start-btn');
         const customBtn = document.getElementById('custom-btn');
         const timerDisplay = document.getElementById('timer-display');
         const levelIdDisplay = document.getElementById('level-id-display');
+        const answerBtn = document.getElementById('answer-btn');
+        const playModeDisplay = document.getElementById('play-mode-display');
         
         const settingsModal = document.getElementById('settings-modal');
         const setSizeInput = document.getElementById('set-size');
         const setDiffInput = document.getElementById('set-diff');
+        const setColorCountInput = document.getElementById('set-color-count');
         const setMiniInput = document.getElementById('set-mini');
+        const setPracticeInput = document.getElementById('set-practice');
         const settingsConfirm = document.getElementById('settings-confirm');
         const settingsCancel = document.getElementById('settings-cancel');
         
@@ -586,6 +636,11 @@
         const customIdInput = document.getElementById('custom-id-input');
         const modalConfirm = document.getElementById('modal-confirm');
         const modalCancel = document.getElementById('modal-cancel');
+
+        const confirmModal = document.getElementById('confirm-modal');
+        const confirmText = document.getElementById('confirm-text');
+        const confirmOk = document.getElementById('confirm-ok');
+        const confirmCancel = document.getElementById('confirm-cancel');
         
         const toastOverlay = document.getElementById('toast-overlay');
         const toastText = document.getElementById('toast-text');
@@ -594,40 +649,81 @@
         const lockBtn = document.getElementById('lock-btn');
         const metaViewport = document.querySelector('meta[name="viewport"]');
 
-        // --- 设置面板开关文字样式与事件 ---
         const textMini = document.getElementById('text-mini');
         const textEnlarge = document.getElementById('text-enlarge');
+        const textChallenge = document.getElementById('text-challenge');
+        const textPractice = document.getElementById('text-practice');
 
-        function updateModeText() {
+        function updateDisplayModeText() {
             if (setMiniInput.checked) {
-                // 右侧 放大模式
                 textMini.classList.remove('active-mini');
                 textEnlarge.classList.add('active-enlarge');
             } else {
-                // 左侧 迷你模式
                 textEnlarge.classList.remove('active-enlarge');
                 textMini.classList.add('active-mini');
             }
         }
 
-        setMiniInput.addEventListener('change', updateModeText);
-        textMini.addEventListener('click', () => { setMiniInput.checked = false; updateModeText(); });
-        textEnlarge.addEventListener('click', () => { setMiniInput.checked = true; updateModeText(); });
+        function updatePlayModeText() {
+            if (setPracticeInput.checked) {
+                textChallenge.classList.remove('active-mini');
+                textPractice.classList.add('active-enlarge');
+            } else {
+                textPractice.classList.remove('active-enlarge');
+                textChallenge.classList.add('active-mini');
+            }
+        }
 
+        setMiniInput.addEventListener('change', updateDisplayModeText);
+        textMini.addEventListener('click', () => { setMiniInput.checked = false; updateDisplayModeText(); });
+        textEnlarge.addEventListener('click', () => { setMiniInput.checked = true; updateDisplayModeText(); });
 
-        function init() {
+        setPracticeInput.addEventListener('change', updatePlayModeText);
+        textChallenge.addEventListener('click', () => { setPracticeInput.checked = false; updatePlayModeText(); });
+        textPractice.addEventListener('click', () => { setPracticeInput.checked = true; updatePlayModeText(); });
+
+        // 更新顶部显示的模式文字
+        function updateTopModeDisplay() {
+            const prefix = settings.isMini ? '迷你' : '加大';
+            const suffix = settings.isPractice ? '练习模式' : '挑战模式';
+            playModeDisplay.textContent = `${prefix}·${suffix}`;
+        }
+
+        function resetBoardToEmpty() {
+            state.isPlaying = false;
+            state.hasActiveGame = false;
+            state.isShowingAnswer = false;
+            state.selectedIds = [];
+            stopTimer();
+            timerDisplay.textContent = "00:00";
+            levelIdDisplay.textContent = "------";
+            startBtn.innerHTML = '开始游戏';
+            
+            // 根据最新设置同步顶部文字
+            updateTopModeDisplay();
+
+            if (settings.isPractice) {
+                document.body.classList.add('practice-mode');
+                answerBtn.style.display = 'flex';
+                answerBtn.style.color = '#fff';
+                labelFound.textContent = "已选";
+                labelRemaining.textContent = "需选";
+            } else {
+                document.body.classList.remove('practice-mode');
+                answerBtn.style.display = 'none';
+                labelFound.textContent = "找到";
+                labelRemaining.textContent = "剩余";
+            }
+            
             applySettingsToGrid();
+            
             leftWall.innerHTML = '';
             rightWall.innerHTML = '';
             for (let i = 0; i < state.rows * state.cols; i++) {
                 leftWall.appendChild(createEmptyBlockElement());
                 rightWall.appendChild(createEmptyBlockElement());
             }
-            timerDisplay.textContent = "00:00";
-            levelIdDisplay.textContent = "------";
-            foundEl.textContent = "0";
-            remainingEl.textContent = state.diffCount;
-            mistakeEl.textContent = "0";
+            updateUI();
         }
 
         function createEmptyBlockElement() {
@@ -656,11 +752,11 @@
             }
         }
 
-        function generateRandomPoints() {
+        function generateRandomPoints(colorsArray) {
             const points = [];
             for (let i = 0; i < 9; i++) {
-                if (Math.random() < 0.75) {
-                    points.push({ color: COLORS[Math.floor(Math.random() * COLORS.length)] });
+                if (rng() < 0.75) {
+                    points.push({ color: colorsArray[Math.floor(rng() * colorsArray.length)] });
                 } else {
                     points.push({ color: null });
                 }
@@ -698,11 +794,44 @@
             timerDisplay.textContent = `${minutesElapsed.toString().padStart(2, '0')}:${secondsElapsed.toString().padStart(2, '0')}`;
         }
 
-        function startGame(levelId) {
+        function showConfirm(msg, onOk) {
+            confirmText.textContent = msg;
+            confirmAction = onOk;
+            confirmModal.classList.remove('hidden');
+        }
+
+        confirmOk.addEventListener('click', () => {
+            confirmModal.classList.add('hidden');
+            if (confirmAction) confirmAction();
+        });
+        confirmCancel.addEventListener('click', () => {
+            confirmModal.classList.add('hidden');
+            confirmAction = null;
+        });
+
+        function requestStartGame(levelId = null) {
+            if (state.hasActiveGame) {
+                showConfirm('当前游戏尚未完成，是否放弃并开始新游戏？', () => {
+                    executeStartGame(levelId);
+                });
+            } else {
+                executeStartGame(levelId);
+            }
+        }
+
+        function executeStartGame(levelId) {
             if (!levelId) levelId = generateRandomId();
             levelIdDisplay.textContent = levelId;
             
+            startBtn.innerHTML = '新的开始';
+
+            const seedStr = `${levelId}_${settings.size}_${settings.colorCount}_${settings.diffInput}`;
+            const seedFunc = xmur3(seedStr);
+            rng = mulberry32(seedFunc());
+
+            const currentColors = ALL_COLORS.slice(0, settings.colorCount);
             const total = state.rows * state.cols;
+            
             let calcDiff = settings.diffInput;
             if (calcDiff.includes('%')) {
                 const percent = parseFloat(calcDiff);
@@ -711,15 +840,34 @@
                 state.diffCount = Math.max(1, Math.min(total, parseInt(calcDiff) || 12));
             }
 
+            state.isPractice = settings.isPractice;
+            state.isPlaying = true;
+            state.hasActiveGame = true;
             state.found = 0;
             state.remaining = state.diffCount;
             state.mistakes = 0;
-            state.isPlaying = true;
+            state.selectedIds = [];
+            state.isShowingAnswer = false;
+            
+            updateTopModeDisplay(); // 更新文字显示
+
+            if (state.isPractice) {
+                document.body.classList.add('practice-mode');
+                labelFound.textContent = "已选";
+                labelRemaining.textContent = "需选";
+                answerBtn.style.display = 'flex';
+                answerBtn.style.color = '#fff';
+            } else {
+                document.body.classList.remove('practice-mode');
+                labelFound.textContent = "找到";
+                labelRemaining.textContent = "剩余";
+                answerBtn.style.display = 'none';
+            }
             updateUI();
 
             state.grid = [];
             for (let i = 0; i < total; i++) {
-                const basePoints = generateRandomPoints();
+                const basePoints = generateRandomPoints(currentColors);
                 state.grid.push({
                     id: i,
                     left: basePoints.map(p => ({ ...p })),
@@ -730,30 +878,34 @@
             }
 
             const indices = Array.from({ length: total }, (_, i) => i);
-            indices.sort(() => Math.random() - 0.5);
+            shuffle(indices);
+            
             const diffIndices = indices.slice(0, state.diffCount);
 
             diffIndices.forEach(idx => {
                 const block = state.grid[idx];
                 block.isDifferent = true;
-                const numPointsToChange = Math.random() < 0.5 ? 1 : 2;
-                const pointIndices = [0,1,2,3,4,5,6,7,8].sort(() => Math.random() - 0.5).slice(0, numPointsToChange);
+                const numPointsToChange = rng() < 0.5 ? 1 : 2;
+                
+                const pointIndices = [0,1,2,3,4,5,6,7,8];
+                shuffle(pointIndices);
+                const targetPoints = pointIndices.slice(0, numPointsToChange);
 
-                pointIndices.forEach(pIdx => {
+                targetPoints.forEach(pIdx => {
                     const leftColor = block.left[pIdx].color;
-                    if (Math.random() < 0.5) {
+                    if (rng() < 0.5) {
                         if (leftColor) {
                             block.right[pIdx].color = null;
                         } else {
-                            block.right[pIdx].color = COLORS[Math.floor(Math.random() * COLORS.length)];
+                            block.right[pIdx].color = currentColors[Math.floor(rng() * currentColors.length)];
                         }
                     } else {
                         if (leftColor) {
                             let newColor;
-                            do { newColor = COLORS[Math.floor(Math.random() * COLORS.length)]; } while (newColor === leftColor);
+                            do { newColor = currentColors[Math.floor(rng() * currentColors.length)]; } while (newColor === leftColor);
                             block.right[pIdx].color = newColor;
                         } else {
-                            block.right[pIdx].color = COLORS[Math.floor(Math.random() * COLORS.length)];
+                            block.right[pIdx].color = currentColors[Math.floor(rng() * currentColors.length)];
                         }
                     }
                 });
@@ -775,7 +927,7 @@
         function createBlockElement(blockData, side) {
             const block = document.createElement('div');
             block.className = 'block';
-            if (blockData.found) block.classList.add('found');
+            if (blockData.found && !state.isPractice) block.classList.add('found');
 
             const points = side === 'left' ? blockData.left : blockData.right;
             
@@ -793,41 +945,78 @@
         }
 
         function handleBlockClick(blockData, side, blockEl) {
-            if (!state.isPlaying || blockData.found) return;
+            if (!state.isPlaying || state.isShowingAnswer) return;
 
-            if (blockData.isDifferent) {
-                blockData.found = true;
-                state.found++;
-                state.remaining--;
-                
-                blockEl.classList.add('found');
+            if (state.isPractice) {
                 const otherSideBlocks = (side === 'left' ? rightWall : leftWall).children;
-                otherSideBlocks[blockData.id].classList.add('found');
-
-                updateUI();
-
-                if (state.remaining === 0) {
-                    state.isPlaying = false;
-                    stopTimer();
-                    showToast(`恭喜找出了所有不同！<br>题号：${levelIdDisplay.textContent}<br>失误：${state.mistakes} 次<br>用时：${timerDisplay.textContent}`, true);
+                const idx = state.selectedIds.indexOf(blockData.id);
+                
+                if (idx > -1) {
+                    state.selectedIds.splice(idx, 1);
+                    blockEl.classList.remove('selected');
+                    otherSideBlocks[blockData.id].classList.remove('selected');
+                    updateUI();
+                } else {
+                    if (state.selectedIds.length >= state.diffCount) {
+                        showToast('已选满，请取消后再选', false);
+                        return;
+                    }
+                    state.selectedIds.push(blockData.id);
+                    blockEl.classList.add('selected');
+                    otherSideBlocks[blockData.id].classList.add('selected');
+                    updateUI();
+                    
+                    if (state.selectedIds.length === state.diffCount) {
+                        let allCorrect = state.selectedIds.every(id => state.grid[id].isDifferent);
+                        if (allCorrect) {
+                            state.isPlaying = false;
+                            state.hasActiveGame = false;
+                            stopTimer();
+                            showToast(`练习成功！全部找对！<br>题号：${levelIdDisplay.textContent}<br>用时：${timerDisplay.textContent}`, true, false);
+                        }
+                    }
                 }
             } else {
-                state.mistakes++;
-                updateUI();
-                blockEl.style.transform = 'translateX(2px)';
-                setTimeout(() => blockEl.style.transform = 'translateX(-2px)', 50);
-                setTimeout(() => blockEl.style.transform = 'translateX(2px)', 100);
-                setTimeout(() => blockEl.style.transform = 'translateX(0)', 150);
+                if (blockData.isDifferent) {
+                    blockData.found = true;
+                    state.found++;
+                    state.remaining--;
+                    
+                    blockEl.classList.add('found');
+                    const otherSideBlocks = (side === 'left' ? rightWall : leftWall).children;
+                    otherSideBlocks[blockData.id].classList.add('found');
+
+                    updateUI();
+
+                    if (state.remaining === 0) {
+                        state.isPlaying = false;
+                        state.hasActiveGame = false;
+                        stopTimer();
+                        showToast(`恭喜找出了所有不同！<br>题号：${levelIdDisplay.textContent}<br>失误：${state.mistakes} 次<br>用时：${timerDisplay.textContent}`, true, false);
+                    }
+                } else {
+                    state.mistakes++;
+                    updateUI();
+                    blockEl.style.transform = 'translateX(2px)';
+                    setTimeout(() => blockEl.style.transform = 'translateX(-2px)', 50);
+                    setTimeout(() => blockEl.style.transform = 'translateX(2px)', 100);
+                    setTimeout(() => blockEl.style.transform = 'translateX(0)', 150);
+                }
             }
         }
 
         function updateUI() {
-            foundEl.textContent = state.found;
-            remainingEl.textContent = state.remaining;
+            if (state.isPractice) {
+                foundEl.textContent = state.selectedIds.length;
+                remainingEl.textContent = state.diffCount - state.selectedIds.length;
+            } else {
+                foundEl.textContent = state.found;
+                remainingEl.textContent = state.remaining;
+            }
             mistakeEl.textContent = state.mistakes;
         }
         
-        function showToast(text, isSuccess = true) {
+        function showToast(text, isSuccess = true, autoHide = true) {
             toastText.innerHTML = text;
             toastText.style.borderColor = isSuccess ? 'var(--success-glow)' : 'var(--text-mistake)';
             toastText.style.boxShadow = isSuccess ? '0 0 30px rgba(74, 222, 128, 0.3)' : '0 0 30px rgba(248, 113, 113, 0.3)';
@@ -845,15 +1034,25 @@
             
             setTimeout(() => document.addEventListener('click', toastDismissHandler), 10);
             clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(toastDismissHandler, 1500);
+            if (autoHide) {
+                toastTimeout = setTimeout(toastDismissHandler, 1500);
+            }
         }
 
-        startBtn.addEventListener('click', () => startGame());
+        startBtn.addEventListener('click', () => requestStartGame());
         
         customBtn.addEventListener('click', () => {
-            customIdInput.value = '';
-            modalOverlay.classList.remove('hidden');
-            customIdInput.focus();
+            if (state.hasActiveGame) {
+                showConfirm('当前游戏尚未完成，是否放弃并开始新游戏？', () => {
+                    customIdInput.value = '';
+                    modalOverlay.classList.remove('hidden');
+                    customIdInput.focus();
+                });
+            } else {
+                customIdInput.value = '';
+                modalOverlay.classList.remove('hidden');
+                customIdInput.focus();
+            }
         });
         
         modalCancel.addEventListener('click', () => modalOverlay.classList.add('hidden'));
@@ -865,18 +1064,45 @@
                 return;
             }
             modalOverlay.classList.add('hidden');
-            startGame(val.toUpperCase());
+            executeStartGame(val.toUpperCase());
         });
         
         customIdInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') modalConfirm.click();
         });
 
+        // 修改后的查看答案逻辑
+        answerBtn.addEventListener('click', () => {
+            if (!state.isPractice || !state.isPlaying) return;
+            state.isShowingAnswer = !state.isShowingAnswer;
+            
+            if (state.isShowingAnswer) {
+                // 无论玩家选没选，只要是不同之处，全部无条件显示蓝框
+                state.grid.forEach(blockData => {
+                    if (blockData.isDifferent) {
+                        leftWall.children[blockData.id].classList.add('show-answer');
+                        rightWall.children[blockData.id].classList.add('show-answer');
+                    }
+                });
+                answerBtn.style.color = '#facc15'; 
+            } else {
+                // 隐藏所有蓝框，玩家原本的黄框自然显现
+                state.grid.forEach(blockData => {
+                    leftWall.children[blockData.id].classList.remove('show-answer');
+                    rightWall.children[blockData.id].classList.remove('show-answer');
+                });
+                answerBtn.style.color = '#fff';
+            }
+        });
+
         document.getElementById('settings-btn').addEventListener('click', () => {
             setSizeInput.value = settings.size;
             setDiffInput.value = settings.diffInput;
+            setColorCountInput.value = settings.colorCount; 
             setMiniInput.checked = !settings.isMini; 
-            updateModeText(); // 打开时同步样式
+            setPracticeInput.checked = settings.isPractice;
+            updateDisplayModeText(); 
+            updatePlayModeText();
             settingsModal.classList.remove('hidden');
         });
 
@@ -895,16 +1121,25 @@
                 return;
             }
 
+            let newColorCount = parseInt(setColorCountInput.value);
+            if (isNaN(newColorCount) || newColorCount < 4 || newColorCount > 10) {
+                showToast('颜色种数必须在 4-10 之间', false);
+                return;
+            }
+
             settings.size = newSize;
             settings.diffInput = newDiff;
+            settings.colorCount = newColorCount; 
             settings.isMini = !setMiniInput.checked; 
+            settings.isPractice = setPracticeInput.checked;
             
             settingsModal.classList.add('hidden');
             
             state.rows = settings.size;
             state.cols = settings.size;
-            applySettingsToGrid();
-            startGame();
+            
+            // 应用后清空盘面，此时同时更新顶部显示
+            resetBoardToEmpty();
         });
 
         helpBtn.addEventListener('click', () => helpModal.classList.remove('hidden'));
@@ -929,6 +1164,7 @@
             setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 50);
         });
 
+        // 锁定与解锁
         lockBtn.addEventListener('click', () => {
             isLocked = !isLocked;
             lockBtn.textContent = isLocked ? '🔒' : '🔓';
@@ -936,7 +1172,7 @@
             if (isLocked) {
                 document.body.style.overflow = 'hidden';
                 document.documentElement.style.overflow = 'hidden';
-                metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+                metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no');
             } else {
                 document.body.style.overflow = '';
                 document.documentElement.style.overflow = '';
@@ -945,10 +1181,28 @@
         });
 
         document.addEventListener('touchmove', (e) => {
-            if (isLocked) e.preventDefault();
+            if (isLocked && e.touches.length > 1) {
+                e.preventDefault();
+            }
         }, { passive: false });
 
-        init();
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = (new Date()).getTime();
+            if (isLocked && now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        document.addEventListener('wheel', (e) => {
+            if (isLocked && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 初始化
+        resetBoardToEmpty();
     </script>
 </body>
 </html>
