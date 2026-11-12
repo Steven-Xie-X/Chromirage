@@ -75,18 +75,31 @@
         }
 
         .game-title {
-            font-size: clamp(20px, 3.5vh, 32px);
-            font-weight: bold;
-            letter-spacing: 4px;
-            padding: 0 100px; 
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            display: flex;
+            gap: 8px;
             margin: 5px 0 10px;
-            color: #fff;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
         }
+
+        .title-char {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: clamp(28px, 4.5vh, 42px);
+            height: clamp(28px, 4.5vh, 42px);
+            background-color: #ffffff;
+            border-radius: 6px;
+            font-size: clamp(18px, 3vh, 28px);
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+        }
+        .title-char:active { transform: scale(0.92); }
+
+        .title-char:nth-child(1) { color: #E74C3C; }
+        .title-char:nth-child(2) { color: #F1C40F; }
+        .title-char:nth-child(3) { color: #3498DB; }
+        .title-char:nth-child(4) { color: #2ECC71; }
 
         .controls {
             display: flex;
@@ -185,9 +198,11 @@
             overflow: hidden; 
             gap: 2vmin; 
             transition: all 0.3s;
+            position: relative;
         }
 
-        .wall {
+        /* DOM 墙（色块模式） */
+        .wall-dom {
             background: var(--panel-bg); 
             border: 1px solid #1e2437;
             border-radius: 12px;
@@ -200,24 +215,19 @@
             flex-shrink: 0; 
         }
 
-        /* --- 核心：极速渲染玻璃罩 --- */
+        /* --- 正常模式：玻璃罩容器 --- */
         .block {
             position: relative;
             background: var(--block-bg);
             border-radius: 10px; 
             border: 2px solid var(--block-border); 
-            
-            /* 移除沉重的内阴影，仅保留外投影提升层次 */
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
-                
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             grid-template-rows: repeat(3, minmax(0, 1fr));
             padding: 12%; 
             gap: 0px; 
-            
             cursor: pointer;
-            /* 开启硬件加速，点击响应无延迟 */
             will-change: transform;
             transition: transform 0.1s ease, border-color 0.1s ease;
             min-width: 0;
@@ -226,7 +236,6 @@
             overflow: hidden;
         }
 
-        /* 玻璃罩反光层 */
         .block::after {
             content: '';
             position: absolute;
@@ -235,30 +244,14 @@
             background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 40%, rgba(0,0,0,0.1) 100%);
             pointer-events: none; 
             z-index: 10;
-            /* 用极轻量的内发光代替沉重的 inset shadow */
             box-shadow: inset 1px 1px 2px rgba(255,255,255,0.1);
         }
 
-        .block:hover {
-            border-color: #4a5678;
-        }
+        .block:hover { border-color: #4a5678; }
+        .block.found { border-color: var(--success-glow); cursor: default; pointer-events: none; }
+        .block.selected { border-color: #facc15; }
+        .block.show-answer { border-color: #3b82f6; z-index: 2; }
 
-        .block.found {
-            border-color: var(--success-glow);
-            cursor: default;
-            pointer-events: none;
-        }
-
-        .block.selected {
-            border-color: #facc15;
-        }
-
-        .block.show-answer {
-            border-color: #3b82f6;
-            z-index: 2;
-        }
-
-        /* --- 极速球体（利用 CSS 渐变代替阴影） --- */
         .dot {
             width: 84%; 
             height: 84%;
@@ -268,19 +261,56 @@
             box-sizing: border-box;
             aspect-ratio: 1 / 1;
             z-index: 5;
-            /* 注意：立体球面效果通过 JS 写入内联 style="background: radial-gradient(...)" 实现，大幅降低渲染压力 */
         }
 
-        /* 迷你模式适配 */
-        body.is-mini .block {
-            padding: 8%; 
-            border-width: 1px; 
-            border-radius: 6px;
+        body.is-mini .block { padding: 8%; border-width: 1px; border-radius: 6px; }
+        body.is-mini .dot { width: 86%; height: 86%; }
+
+        /* =========================================================
+           魔方模式专属样式
+           ========================================================= */
+        .cube-board-wrapper {
+            display: none;
+            /* 核心：直接强制正方形 */
+            aspect-ratio: 1 / 1; 
+            flex-shrink: 0;
+            /* 尺寸完全依赖 JS 设置具体的像素，这里只给个基础 */
+            width: 100%; 
+            height: auto;
         }
         
-        body.is-mini .dot {
-            width: 86%; 
-            height: 86%;
+        body.cube-mode .wall-dom { display: none; }
+        body.cube-mode .cube-board-wrapper { display: flex; }
+        body.cube-mode .game-container { gap: 2vw; }
+
+        /* 坐标轴网格布局 */
+        .cube-inner-wrapper {
+            display: grid;
+            /* 留出坐标轴的位置 */
+            grid-template-columns: 24px 1fr; 
+            grid-template-rows: 24px 1fr;
+            width: 100%;
+            height: 100%;
+        }
+
+        .axis-corner { grid-area: 1 / 1; background: transparent; }
+        .axis-top { grid-area: 1 / 2; position: relative; }
+        .axis-left { grid-area: 2 / 1; position: relative; }
+
+        /* 核心画布 */
+        .main-canvas {
+            grid-area: 2 / 2;
+            width: 100%;
+            height: 100%;
+            background: #000; 
+            border: 1px solid #475569; 
+            display: block;
+        }
+
+        .axis-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
         }
 
         /* =========================================================
@@ -288,15 +318,20 @@
            ========================================================= */
         @media (orientation: landscape) {
             .game-container { flex-direction: row; }
-            body:not(.is-mini) .wall, body.is-mini .wall {
+            body:not(.is-mini) .wall-dom, body.is-mini .wall-dom {
                 height: 100%;
                 width: auto;
                 max-width: 48%;
             }
+            .cube-board-wrapper {
+                /* 高度占满 */
+                height: 90%;
+                width: auto;
+            }
         }
 
         @media (orientation: landscape) and (min-width: 1024px) {
-            body.is-mini .wall {
+            body.is-mini .wall-dom {
                 height: auto; 
                 width: 25%;   
                 max-width: 25%;
@@ -314,14 +349,14 @@
                 padding: 10px 0; 
                 overscroll-behavior: contain;
             }
-            body.is-mini .wall { width: 48%; height: auto; }
+            body.is-mini .wall-dom { width: 48%; height: auto; }
 
             body:not(.is-mini):not(.is-fullscreen) .game-container { 
                 flex-direction: column; 
                 gap: 2vh; 
                 overflow: hidden;
             }
-            body:not(.is-mini):not(.is-fullscreen) .wall { 
+            body:not(.is-mini):not(.is-fullscreen) .wall-dom { 
                 flex: 1; 
                 height: 0; 
                 width: auto; 
@@ -330,7 +365,20 @@
             }
 
             body:not(.is-mini).is-fullscreen .game-container { flex-direction: column; gap: 2vh; }
-            body:not(.is-mini).is-fullscreen .wall { width: 100%; max-width: min(100%, 45vh); height: auto; margin: 0 auto; }
+            body:not(.is-mini).is-fullscreen .wall-dom { width: 100%; max-width: min(100%, 45vh); height: auto; margin: 0 auto; }
+
+            /* 竖屏魔方模式 */
+            body.cube-mode .game-container {
+                flex-direction: column;
+                gap: 15px;
+                align-items: center;
+                overflow-y: auto;
+            }
+            .cube-board-wrapper {
+                /* 宽度占满 */
+                width: 90%;
+                height: auto;
+            }
         }
 
         /* =========================================================
@@ -459,7 +507,7 @@
         <div class="modal-content">
             <h3>⚙️ 游戏设置</h3>
             <div class="form-group">
-                <label>盘面大小 (4-12)</label>
+                <label id="label-size">盘面大小 (4-12)</label>
                 <input type="number" id="set-size" min="4" max="12" value="10">
             </div>
             <div class="form-group">
@@ -470,7 +518,7 @@
                 <label>颜色种数 (4-10)</label>
                 <input type="number" id="set-color-count" min="4" max="10" value="8">
             </div>
-            <div class="form-group" style="justify-content: center;">
+            <div class="form-group" id="group-mini" style="justify-content: center;">
                 <div class="switch-container">
                     <span id="text-mini" class="mode-text">迷你模式</span>
                     <label class="switch">
@@ -501,24 +549,7 @@
     <div id="help-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <h3>📖 游戏规则与说明</h3>
-            <div class="rules-text">
-                <p><strong>玩法目标：</strong>找出左右两面魔方墙中完全相同的方块位置所隐藏的不同之处。</p>
-                <ul>
-                    <li>每个方块内部是一个 3x3 的小圆点矩阵。</li>
-                    <li>不同之处表现为：<strong>颜色的增减</strong> 或 <strong>颜色的替换</strong>（最多2处）。</li>
-                </ul>
-                <p><strong>模式说明：</strong></p>
-                <ul>
-                    <li><strong>挑战模式：</strong> 点击方块立刻判断对错，点错累积失误。</li>
-                    <li><strong>练习模式：</strong> 选中方块暂不判断，选满数量后若全对则自动成功。可点击右上角 💡 查看答案。</li>
-                </ul>
-                <p><strong>界面操作：</strong></p>
-                <ul>
-                    <li><strong>左上角 ⛶：</strong> 进入/退出全屏。</li>
-                    <li><strong>左上角 ⚙：</strong> 调整盘面参数及模式（修改后需点击“应用”，再点“开始游戏”）。</li>
-                    <li><strong>右上角 🔓：</strong> 锁定界面，防止误触。</li>
-                </ul>
-            </div>
+            <div class="rules-text" id="help-content"></div>
             <div class="modal-buttons">
                 <button id="help-close" class="btn-confirm" style="width: 100%;">我知道了</button>
             </div>
@@ -555,7 +586,12 @@
     </div>
 
     <div class="top-ui">
-        <h1 class="game-title">色块寻异</h1>
+        <h1 class="game-title" id="main-title">
+            <span id="char1" class="title-char">色</span>
+            <span id="char2" class="title-char">块</span>
+            <span class="title-char">寻</span>
+            <span class="title-char">异</span>
+        </h1>
         <div class="controls">
             <button class="btn btn-start" id="start-btn">开始游戏</button>
             <button class="btn btn-custom" id="custom-btn">指定编号</button>
@@ -567,14 +603,34 @@
         </div>
         <div class="header">
             <div><span id="label-found">找到</span> <span id="found-count" class="text-found">0</span></div>
-            <div><span id="label-remaining">剩余</span> <span id="remaining-count" class="text-remaining">12</span></div>
+            <div><span id="label-remaining">剩余</span> <span id="remaining-count" class="text-remaining">0</span></div>
             <div class="mistake-container">失误 <span id="mistake-count" class="text-mistake">0</span></div>
         </div>
     </div>
 
     <div class="game-container" id="game-container">
-        <div class="wall" id="wall-left"></div>
-        <div class="wall" id="wall-right"></div>
+        <!-- 色块模式 DOM -->
+        <div class="wall wall-dom" id="wall-left-dom"></div>
+        <div class="wall wall-dom" id="wall-right-dom"></div>
+        
+        <!-- 魔方模式 Canvas 包装 -->
+        <div class="cube-board-wrapper" id="cube-left-wrapper">
+            <div class="cube-inner-wrapper">
+                <div class="axis-corner"></div>
+                <div class="axis-top"><canvas id="axis-top-left" class="axis-canvas"></canvas></div>
+                <div class="axis-left"><canvas id="axis-left-left" class="axis-canvas"></canvas></div>
+                <canvas id="canvas-left" class="main-canvas"></canvas>
+            </div>
+        </div>
+
+        <div class="cube-board-wrapper" id="cube-right-wrapper">
+            <div class="cube-inner-wrapper">
+                <div class="axis-corner"></div>
+                <div class="axis-top"><canvas id="axis-top-right" class="axis-canvas"></canvas></div>
+                <div class="axis-left"><canvas id="axis-left-right" class="axis-canvas"></canvas></div>
+                <canvas id="canvas-right" class="main-canvas"></canvas>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -584,17 +640,18 @@
             '#8B4513', '#95A5A6'
         ];
         
-        let settings = {
-            size: 10,
-            diffInput: '12%',
-            colorCount: 8,
-            isMini: true,
-            isPractice: false
-        };
+        let isCubeMode = false; 
+
+        let settingsBlock = { size: 10, diffInput: '12%', colorCount: 8, isMini: true, isPractice: false };
+        let settingsCube = { size: 10, diffInput: '1', colorCount: 8, isMini: false, isPractice: false };
+        
+        function getActiveSettings() {
+            return isCubeMode ? settingsCube : settingsBlock;
+        }
 
         let state = {
             rows: 10, cols: 10, diffCount: 12,
-            grid: [], found: 0, remaining: 12, mistakes: 0, isPlaying: false,
+            grid: [], found: 0, remaining: 0, mistakes: 0, isPlaying: false,
             isPractice: false, 
             selectedIds: [], 
             isShowingAnswer: false,
@@ -606,6 +663,23 @@
         let isLocked = false;
         let rng = Math.random;
         let confirmAction = null;
+
+        // Canvas 元素
+        const canvasLeft = document.getElementById('canvas-left');
+        const canvasRight = document.getElementById('canvas-right');
+        const axisTopLeft = document.getElementById('axis-top-left');
+        const axisTopRight = document.getElementById('axis-top-right');
+        const axisLeftLeft = document.getElementById('axis-left-left');
+        const axisLeftRight = document.getElementById('axis-left-right');
+
+        const ctxLeft = canvasLeft.getContext('2d');
+        const ctxRight = canvasRight.getContext('2d');
+        const ctxAxisTopLeft = axisTopLeft.getContext('2d');
+        const ctxAxisTopRight = axisTopRight.getContext('2d');
+        const ctxAxisLeftLeft = axisLeftLeft.getContext('2d');
+        const ctxAxisLeftRight = axisLeftRight.getContext('2d');
+
+        let cellSize = 0;
 
         function xmur3(str) {
             for(var i = 0, h = 1779033703 ^ str.length; i < str.length; i++) {
@@ -636,8 +710,9 @@
             return array;
         }
 
-        const leftWall = document.getElementById('wall-left');
-        const rightWall = document.getElementById('wall-right');
+        // DOM 元素
+        const leftWallDom = document.getElementById('wall-left-dom');
+        const rightWallDom = document.getElementById('wall-right-dom');
         const foundEl = document.getElementById('found-count');
         const remainingEl = document.getElementById('remaining-count');
         const mistakeEl = document.getElementById('mistake-count');
@@ -684,6 +759,72 @@
         const textEnlarge = document.getElementById('text-enlarge');
         const textChallenge = document.getElementById('text-challenge');
         const textPractice = document.getElementById('text-practice');
+        const labelSize = document.getElementById('label-size');
+        const groupMini = document.getElementById('group-mini');
+
+        // ==========================================
+        // 标题切换与参数隔离同步逻辑
+        // ==========================================
+        const char1 = document.getElementById('char1');
+        const char2 = document.getElementById('char2');
+
+        char1.addEventListener('click', () => {
+            char1.textContent = char1.textContent === '色' ? '魔' : '色';
+            checkModeChange();
+        });
+
+        char2.addEventListener('click', () => {
+            char2.textContent = char2.textContent === '块' ? '方' : '块';
+            checkModeChange();
+        });
+
+        function checkModeChange() {
+            if (char1.textContent === '魔' && char2.textContent === '方') {
+                if (!isCubeMode) {
+                    isCubeMode = true;
+                    document.body.classList.add('cube-mode');
+                    document.title = "魔方寻异";
+                    
+                    labelSize.textContent = '盘面大小 (5-100)';
+                    setSizeInput.min = 5;
+                    setSizeInput.max = 100;
+                    groupMini.style.display = 'none'; 
+                    
+                    setSizeInput.value = settingsCube.size;
+                    setDiffInput.value = settingsCube.diffInput;
+                    setColorCountInput.value = settingsCube.colorCount;
+                    
+                    document.getElementById('help-content').innerHTML = `
+                        <p><strong>隐藏玩法：</strong>找出左右两面魔方墙中隐藏的不同颜色格子。</p>
+                        <ul><li>每个格子是一个纯色正方形，无缝拼接排列。</li><li>不同之处表现为：格子颜色的直接替换。</li></ul>
+                    `;
+                    resetBoardToEmpty();
+                }
+            } else if (char1.textContent === '色' && char2.textContent === '块') {
+                if (isCubeMode) {
+                    isCubeMode = false;
+                    document.body.classList.remove('cube-mode');
+                    document.title = "色块寻异";
+                    
+                    labelSize.textContent = '盘面大小 (4-12)';
+                    setSizeInput.min = 4;
+                    setSizeInput.max = 12;
+                    groupMini.style.display = 'flex'; 
+                    
+                    setSizeInput.value = settingsBlock.size;
+                    setDiffInput.value = settingsBlock.diffInput;
+                    setColorCountInput.value = settingsBlock.colorCount;
+                    setMiniInput.checked = !settingsBlock.isMini; 
+                    
+                    document.getElementById('help-content').innerHTML = `
+                        <p><strong>玩法目标：</strong>找出左右两面魔方墙中完全相同的方块位置所隐藏的不同之处。</p>
+                        <ul><li>每个方块内部是一个 3x3 的小圆点矩阵。</li></ul>
+                    `;
+                    resetBoardToEmpty();
+                }
+            }
+        }
+        // ==========================================
 
         function updateDisplayModeText() {
             if (setMiniInput.checked) {
@@ -714,35 +855,306 @@
         textPractice.addEventListener('click', () => { setPracticeInput.checked = true; updatePlayModeText(); });
 
         function updateTopModeDisplay() {
-            const prefix = settings.isMini ? '迷你' : '加大';
-            const suffix = settings.isPractice ? '练习模式' : '挑战模式';
-            playModeDisplay.textContent = `${prefix}·${suffix}`;
+            if (isCubeMode) {
+                playModeDisplay.textContent = settingsCube.isPractice ? '练习模式' : '挑战模式';
+            } else {
+                const prefix = settingsBlock.isMini ? '迷你' : '加大';
+                const suffix = settingsBlock.isPractice ? '练习模式' : '挑战模式';
+                playModeDisplay.textContent = `${prefix}·${suffix}`;
+            }
         }
 
-        // 事件委托
-        leftWall.addEventListener('click', (e) => {
-            const blockEl = e.target.closest('.block');
-            if (!blockEl || !blockEl.dataset.id) return;
-            const id = parseInt(blockEl.dataset.id);
-            handleBlockClick(state.grid[id], 'left', blockEl);
+        // ==========================================
+        // Canvas 渲染逻辑（终极精准绝对正方形）
+        // ==========================================
+        function resizeCanvas() {
+            if (!isCubeMode) return;
+            
+            // 获取外层最大可用正方形边长
+            const wrapper = document.getElementById('cube-left-wrapper');
+            const rect = wrapper.getBoundingClientRect();
+            // 取最短边作为绝对正方形
+            const size = Math.min(rect.width, rect.height);
+            if (size <= 0) return;
+            
+            const dpr = window.devicePixelRatio || 1;
+            
+            // 强制主画布的物理宽高一致
+            canvasLeft.width = Math.floor(size * dpr);
+            canvasLeft.height = Math.floor(size * dpr);
+            canvasRight.width = Math.floor(size * dpr);
+            canvasRight.height = Math.floor(size * dpr);
+            
+            // 强制CSS宽高一致
+            canvasLeft.style.width = `${size}px`;
+            canvasLeft.style.height = `${size}px`;
+            canvasRight.style.width = `${size}px`;
+            canvasRight.style.height = `${size}px`;
+
+            ctxLeft.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctxRight.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            const topRect = axisTopLeft.getBoundingClientRect();
+            const leftRect = axisLeftLeft.getBoundingClientRect();
+            
+            axisTopLeft.width = topRect.width * dpr;
+            axisTopLeft.height = topRect.height * dpr;
+            axisTopRight.width = topRect.width * dpr;
+            axisTopRight.height = topRect.height * dpr;
+            
+            axisLeftLeft.width = leftRect.width * dpr;
+            axisLeftLeft.height = leftRect.height * dpr;
+            axisLeftRight.width = leftRect.width * dpr;
+            axisLeftRight.height = leftRect.height * dpr;
+
+            ctxAxisTopLeft.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctxAxisTopRight.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctxAxisLeftLeft.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctxAxisLeftRight.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            cellSize = size / settingsCube.size; // 逻辑像素大小，用于点击
+
+            drawCubeBoard();
+            drawAxes();
+        }
+
+        function drawAxes() {
+            if (!isCubeMode) return;
+            
+            const topW = axisTopLeft.width / (window.devicePixelRatio || 1);
+            const topH = axisTopLeft.height / (window.devicePixelRatio || 1);
+            const leftW = axisLeftLeft.width / (window.devicePixelRatio || 1);
+            const leftH = axisLeftLeft.height / (window.devicePixelRatio || 1);
+
+            ctxAxisTopLeft.clearRect(0, 0, topW, topH);
+            ctxAxisTopRight.clearRect(0, 0, topW, topH);
+            ctxAxisLeftLeft.clearRect(0, 0, leftW, leftH);
+            ctxAxisLeftRight.clearRect(0, 0, leftW, leftH);
+
+            const fontSize = Math.max(8, Math.min(12, cellSize * 0.6));
+            ctxAxisTopLeft.font = `${fontSize}px monospace`;
+            ctxAxisTopLeft.fillStyle = '#cbd5e1';
+            ctxAxisTopLeft.textAlign = 'center';
+            ctxAxisTopLeft.textBaseline = 'middle';
+
+            ctxAxisTopRight.font = ctxAxisTopLeft.font;
+            ctxAxisTopRight.fillStyle = ctxAxisTopLeft.fillStyle;
+            ctxAxisTopRight.textAlign = ctxAxisTopLeft.textAlign;
+            ctxAxisTopRight.textBaseline = ctxAxisTopLeft.textBaseline;
+
+            ctxAxisLeftLeft.font = ctxAxisTopLeft.font;
+            ctxAxisLeftLeft.fillStyle = ctxAxisTopLeft.fillStyle;
+            ctxAxisLeftLeft.textAlign = 'center';
+            ctxAxisLeftLeft.textBaseline = 'middle';
+
+            ctxAxisLeftRight.font = ctxAxisTopLeft.font;
+            ctxAxisLeftRight.fillStyle = ctxAxisTopLeft.fillStyle;
+            ctxAxisLeftRight.textAlign = ctxAxisLeftLeft.textAlign;
+            ctxAxisLeftRight.textBaseline = ctxAxisLeftLeft.textBaseline;
+
+            const isLarge = settingsCube.size > 20;
+
+            for (let i = 0; i < settingsCube.size; i++) {
+                const x = i * cellSize + cellSize / 2;
+                const val = i + 1;
+                
+                if (!isLarge) {
+                    ctxAxisTopLeft.fillText(val, x, topH / 2);
+                    ctxAxisTopRight.fillText(val, x, topH / 2);
+                } else {
+                    if (val === 1 || val % 10 === 1) {
+                        ctxAxisTopLeft.fillText(val, x, topH / 2 + 2);
+                        ctxAxisTopRight.fillText(val, x, topH / 2 + 2);
+                    } else {
+                        ctxAxisTopLeft.beginPath();
+                        ctxAxisTopLeft.moveTo(x, topH - 4);
+                        ctxAxisTopLeft.lineTo(x, topH);
+                        ctxAxisTopLeft.strokeStyle = '#64748b';
+                        ctxAxisTopLeft.lineWidth = 1;
+                        ctxAxisTopLeft.stroke();
+                        
+                        ctxAxisTopRight.beginPath();
+                        ctxAxisTopRight.moveTo(x, topH - 4);
+                        ctxAxisTopRight.lineTo(x, topH);
+                        ctxAxisTopRight.strokeStyle = '#64748b';
+                        ctxAxisTopRight.lineWidth = 1;
+                        ctxAxisTopRight.stroke();
+                    }
+                }
+            }
+
+            for (let i = 0; i < settingsCube.size; i++) {
+                const y = i * cellSize + cellSize / 2;
+                const val = i + 1;
+                
+                if (!isLarge) {
+                    ctxAxisLeftLeft.fillText(val, leftW / 2, y);
+                    ctxAxisLeftRight.fillText(val, leftW / 2, y);
+                } else {
+                    if (val === 1 || val % 10 === 1) {
+                        ctxAxisLeftLeft.fillText(val, leftW / 2, y);
+                        ctxAxisLeftRight.fillText(val, leftW / 2, y);
+                    } else {
+                        ctxAxisLeftLeft.beginPath();
+                        ctxAxisLeftLeft.moveTo(leftW - 4, y);
+                        ctxAxisLeftLeft.lineTo(leftW, y);
+                        ctxAxisLeftLeft.strokeStyle = '#64748b';
+                        ctxAxisLeftLeft.lineWidth = 1;
+                        ctxAxisLeftLeft.stroke();
+                        
+                        ctxAxisLeftRight.beginPath();
+                        ctxAxisLeftRight.moveTo(leftW - 4, y);
+                        ctxAxisLeftRight.lineTo(leftW, y);
+                        ctxAxisLeftRight.strokeStyle = '#64748b';
+                        ctxAxisLeftRight.lineWidth = 1;
+                        ctxAxisLeftRight.stroke();
+                    }
+                }
+            }
+        }
+
+        function drawCubeBoard() {
+            if (!isCubeMode) return;
+            
+            const physicalW = canvasLeft.width;
+            const physicalH = canvasLeft.height;
+            
+            // 使用 1:1 物理坐标系绘制，避免 DPR 引起的模糊与缝隙
+            ctxLeft.setTransform(1, 0, 0, 1, 0, 0);
+            ctxRight.setTransform(1, 0, 0, 1, 0, 0);
+            
+            // 纯黑背景
+            ctxLeft.fillStyle = '#000000';
+            ctxLeft.fillRect(0, 0, physicalW, physicalH);
+            ctxRight.fillStyle = '#000000';
+            ctxRight.fillRect(0, 0, physicalW, physicalH);
+
+            // 核心：整数均匀分配算法
+            const cols = settingsCube.size;
+            const rows = settingsCube.size;
+            
+            const xCoords = new Array(cols + 1);
+            const yCoords = new Array(rows + 1);
+            
+            const baseW = Math.floor(physicalW / cols);
+            const remainderW = physicalW % cols;
+            
+            let currentX = 0;
+            for (let i = 0; i <= cols; i++) {
+                xCoords[i] = currentX;
+                currentX += (i < remainderW) ? baseW + 1 : baseW;
+            }
+            
+            const baseH = Math.floor(physicalH / rows);
+            const remainderH = physicalH % rows;
+            
+            let currentY = 0;
+            for (let i = 0; i <= rows; i++) {
+                yCoords[i] = currentY;
+                currentY += (i < remainderH) ? baseH + 1 : baseH;
+            }
+
+            for (let i = 0; i < state.grid.length; i++) {
+                const b = state.grid[i];
+                const row = Math.floor(i / cols);
+                const col = i % cols;
+                
+                const px = xCoords[col];
+                const py = yCoords[row];
+                const wRect = xCoords[col+1] - px;
+                const hRect = yCoords[row+1] - py;
+                
+                // 留出 1 物理像素作为黑线
+                const fillW = wRect - 1;
+                const fillH = hRect - 1;
+
+                if (b.left.color) {
+                    ctxLeft.fillStyle = b.left.color;
+                    ctxLeft.fillRect(px, py, fillW, fillH);
+                }
+
+                if (b.right.color) {
+                    ctxRight.fillStyle = b.right.color;
+                    ctxRight.fillRect(px, py, fillW, fillH);
+                }
+                
+                // 状态高亮
+                if (b.found || state.selectedIds.includes(b.id) || (state.isShowingAnswer && b.isDifferent)) {
+                    let strokeColor = '';
+                    if (b.found) strokeColor = '#4ade80';
+                    else if (state.selectedIds.includes(b.id)) strokeColor = '#facc15';
+                    else if (state.isShowingAnswer && b.isDifferent) strokeColor = '#3b82f6';
+                    
+                    // 高亮框宽度 3 个物理像素
+                    ctxLeft.strokeStyle = strokeColor;
+                    ctxLeft.lineWidth = 3;
+                    ctxLeft.strokeRect(px + 1.5, py + 1.5, wRect - 4, hRect - 4);
+                    
+                    ctxRight.strokeStyle = strokeColor;
+                    ctxRight.lineWidth = 3;
+                    ctxRight.strokeRect(px + 1.5, py + 1.5, wRect - 4, hRect - 4);
+                }
+            }
+            
+            // 恢复 DPR 比例
+            const dpr = window.devicePixelRatio || 1;
+            ctxLeft.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctxRight.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Canvas 点击事件
+        canvasLeft.addEventListener('click', (e) => {
+            const rect = canvasLeft.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const col = Math.floor(x / cellSize);
+            const row = Math.floor(y / cellSize);
+            const id = row * settingsCube.size + col;
+            if (id >= 0 && id < state.grid.length) {
+                handleBlockClick(state.grid[id], 'left', null);
+            }
         });
 
-        rightWall.addEventListener('click', (e) => {
-            const blockEl = e.target.closest('.block');
-            if (!blockEl || !blockEl.dataset.id) return;
-            const id = parseInt(blockEl.dataset.id);
-            handleBlockClick(state.grid[id], 'right', blockEl);
+        canvasRight.addEventListener('click', (e) => {
+            const rect = canvasRight.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const col = Math.floor(x / cellSize);
+            const row = Math.floor(y / cellSize);
+            const id = row * settingsCube.size + col;
+            if (id >= 0 && id < state.grid.length) {
+                handleBlockClick(state.grid[id], 'right', null);
+            }
         });
 
-        // 辅助函数：生成带球体立体渐变的 inline style
+        const resizeObserver = new ResizeObserver(() => {
+            if (isCubeMode) resizeCanvas();
+        });
+        resizeObserver.observe(document.getElementById('game-container'));
+
+        // ==========================================
+        // DOM 渲染逻辑（色块模式）
+        // ==========================================
+        leftWallDom.addEventListener('click', (e) => {
+            const targetEl = e.target.closest('.block');
+            if (!targetEl || !targetEl.dataset.id) return;
+            const id = parseInt(targetEl.dataset.id);
+            handleBlockClick(state.grid[id], 'left', targetEl);
+        });
+
+        rightWallDom.addEventListener('click', (e) => {
+            const targetEl = e.target.closest('.block');
+            if (!targetEl || !targetEl.dataset.id) return;
+            const id = parseInt(targetEl.dataset.id);
+            handleBlockClick(state.grid[id], 'right', targetEl);
+        });
+
         function getDotStyle(color) {
             if (!color) return '';
-            // 核心性能优化：利用 radial-gradient 代替复杂的 box-shadow
             return `background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.6) 0%, ${color} 50%, rgba(0,0,0,0.8) 100%);`;
         }
 
-        // 快速字符串拼接渲染
-        function renderBoard() {
+        function renderDomBoard() {
             let leftHtml = '';
             let rightHtml = '';
             
@@ -761,22 +1173,22 @@
                 }
                 rightHtml += `</div>`;
             }
-            
-            leftWall.innerHTML = leftHtml;
-            rightWall.innerHTML = rightHtml;
+            leftWallDom.innerHTML = leftHtml;
+            rightWallDom.innerHTML = rightHtml;
         }
 
+        // ==========================================
+        // 主渲染与重置逻辑
+        // ==========================================
         function resetBoardToEmpty() {
             state.isPlaying = false;
             state.hasActiveGame = false;
             state.isShowingAnswer = false;
             state.selectedIds = [];
             
-            // 核心修复：将状态栏重置
             state.found = 0;
             state.mistakes = 0;
-            state.diffCount = Math.max(1, Math.min(state.rows * state.cols, parseInt(settings.diffInput) || 12));
-            state.remaining = state.diffCount;
+            state.remaining = 0; 
             
             stopTimer();
             timerDisplay.textContent = "00:00";
@@ -785,7 +1197,9 @@
             
             updateTopModeDisplay();
 
-            if (settings.isPractice) {
+            const active = getActiveSettings();
+
+            if (active.isPractice) {
                 document.body.classList.add('practice-mode');
                 answerBtn.style.display = 'flex';
                 answerBtn.style.color = '#fff';
@@ -800,47 +1214,57 @@
             
             applySettingsToGrid();
             
-            // 快速生成空白网格
-            let leftHtml = '';
-            let rightHtml = '';
-            const total = state.rows * state.cols;
-            const emptyBlock = `<div class="block"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
-            
-            for (let i = 0; i < total; i++) {
-                leftHtml += emptyBlock;
-                rightHtml += emptyBlock;
+            if (isCubeMode) {
+                state.grid = [];
+                drawCubeBoard(); 
+                drawAxes();
+            } else {
+                let leftHtml = '';
+                let rightHtml = '';
+                const total = active.size * active.size;
+                const emptyBlock = `<div class="block"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+                for (let i = 0; i < total; i++) { leftHtml += emptyBlock; rightHtml += emptyBlock; }
+                leftWallDom.innerHTML = leftHtml;
+                rightWallDom.innerHTML = rightHtml;
             }
-            leftWall.innerHTML = leftHtml;
-            rightWall.innerHTML = rightHtml;
             
-            updateUI(); // 此时会显示重置后的状态栏
+            updateUI();
         }
 
         function applySettingsToGrid() {
-            const cols = `repeat(${settings.size}, minmax(0, 1fr))`;
-            const rows = `repeat(${settings.size}, minmax(0, 1fr))`;
-            leftWall.style.gridTemplateColumns = cols;
-            leftWall.style.gridTemplateRows = rows;
-            rightWall.style.gridTemplateColumns = cols;
-            rightWall.style.gridTemplateRows = rows;
+            const active = getActiveSettings();
+            const cols = `repeat(${active.size}, minmax(0, 1fr))`;
+            const rows = `repeat(${active.size}, minmax(0, 1fr))`;
+            leftWallDom.style.gridTemplateColumns = cols;
+            leftWallDom.style.gridTemplateRows = rows;
+            rightWallDom.style.gridTemplateColumns = cols;
+            rightWallDom.style.gridTemplateRows = rows;
             
-            if (settings.isMini) {
+            if (active.isMini && !isCubeMode) {
                 document.body.classList.add('is-mini');
             } else {
                 document.body.classList.remove('is-mini');
             }
+
+            if (isCubeMode) {
+                setTimeout(resizeCanvas, 50);
+            }
         }
 
         function generateRandomPoints(colorsArray) {
-            const points = [];
-            for (let i = 0; i < 9; i++) {
-                if (rng() < 0.75) {
-                    points.push({ color: colorsArray[Math.floor(rng() * colorsArray.length)] });
-                } else {
-                    points.push({ color: null });
+            if (isCubeMode) {
+                return colorsArray[Math.floor(rng() * colorsArray.length)];
+            } else {
+                const points = [];
+                for (let i = 0; i < 9; i++) {
+                    if (rng() < 0.75) {
+                        points.push({ color: colorsArray[Math.floor(rng() * colorsArray.length)] });
+                    } else {
+                        points.push({ color: null });
+                    }
                 }
+                return points;
             }
-            return points;
         }
 
         function generateRandomId() {
@@ -860,10 +1284,7 @@
             updateTimerDisplay();
             timerInterval = setInterval(() => {
                 secondsElapsed++;
-                if (secondsElapsed >= 60) {
-                    minutesElapsed++;
-                    secondsElapsed = 0;
-                }
+                if (secondsElapsed >= 60) { minutesElapsed++; secondsElapsed = 0; }
                 updateTimerDisplay();
             }, 1000);
         }
@@ -904,26 +1325,28 @@
             
             startBtn.innerHTML = '新的开始';
 
-            const seedStr = `${levelId}_${settings.size}_${settings.colorCount}_${settings.diffInput}`;
+            const active = getActiveSettings();
+            const modeStr = isCubeMode ? 'cube' : 'block';
+            const seedStr = `${levelId}_${active.size}_${active.colorCount}_${active.diffInput}_${modeStr}`;
             const seedFunc = xmur3(seedStr);
             rng = mulberry32(seedFunc());
 
-            const currentColors = ALL_COLORS.slice(0, settings.colorCount);
-            const total = state.rows * state.cols;
+            const currentColors = ALL_COLORS.slice(0, active.colorCount);
+            const total = active.size * active.size;
             
-            let calcDiff = settings.diffInput;
+            let calcDiff = active.diffInput;
             if (calcDiff.includes('%')) {
                 const percent = parseFloat(calcDiff);
                 state.diffCount = Math.max(1, Math.min(total, Math.round(total * percent / 100)));
             } else {
-                state.diffCount = Math.max(1, Math.min(total, parseInt(calcDiff) || 12));
+                state.diffCount = Math.max(1, Math.min(total, parseInt(calcDiff) || 1));
             }
 
-            state.isPractice = settings.isPractice;
+            state.isPractice = active.isPractice;
             state.isPlaying = true;
             state.hasActiveGame = true;
             state.found = 0;
-            state.remaining = state.diffCount;
+            state.remaining = state.diffCount; 
             state.mistakes = 0;
             state.selectedIds = [];
             state.isShowingAnswer = false;
@@ -946,14 +1369,25 @@
 
             state.grid = [];
             for (let i = 0; i < total; i++) {
-                const basePoints = generateRandomPoints(currentColors);
-                state.grid.push({
-                    id: i,
-                    left: basePoints.map(p => ({ ...p })),
-                    right: basePoints.map(p => ({ ...p })),
-                    isDifferent: false,
-                    found: false
-                });
+                if (isCubeMode) {
+                    const baseColor = generateRandomPoints(currentColors);
+                    state.grid.push({
+                        id: i,
+                        left: { color: baseColor },
+                        right: { color: baseColor },
+                        isDifferent: false,
+                        found: false
+                    });
+                } else {
+                    const basePoints = generateRandomPoints(currentColors);
+                    state.grid.push({
+                        id: i,
+                        left: basePoints.map(p => ({ ...p })),
+                        right: basePoints.map(p => ({ ...p })),
+                        isDifferent: false,
+                        found: false
+                    });
+                }
             }
 
             const indices = Array.from({ length: total }, (_, i) => i);
@@ -964,33 +1398,39 @@
             diffIndices.forEach(idx => {
                 const block = state.grid[idx];
                 block.isDifferent = true;
-                const numPointsToChange = rng() < 0.5 ? 1 : 2;
                 
-                const pointIndices = [0,1,2,3,4,5,6,7,8];
-                shuffle(pointIndices);
-                const targetPoints = pointIndices.slice(0, numPointsToChange);
+                if (isCubeMode) {
+                    let newColor;
+                    do { newColor = currentColors[Math.floor(rng() * currentColors.length)]; } while (newColor === block.left.color);
+                    block.right.color = newColor;
+                } else {
+                    const numPointsToChange = rng() < 0.5 ? 1 : 2;
+                    const pointIndices = [0,1,2,3,4,5,6,7,8];
+                    shuffle(pointIndices);
+                    const targetPoints = pointIndices.slice(0, numPointsToChange);
 
-                targetPoints.forEach(pIdx => {
-                    const leftColor = block.left[pIdx].color;
-                    if (rng() < 0.5) {
-                        if (leftColor) {
-                            block.right[pIdx].color = null;
+                    targetPoints.forEach(pIdx => {
+                        const leftColor = block.left[pIdx].color;
+                        if (rng() < 0.5) {
+                            if (leftColor) { block.right[pIdx].color = null; } 
+                            else { block.right[pIdx].color = currentColors[Math.floor(rng() * currentColors.length)]; }
                         } else {
-                            block.right[pIdx].color = currentColors[Math.floor(rng() * currentColors.length)];
+                            if (leftColor) {
+                                let newColor;
+                                do { newColor = currentColors[Math.floor(rng() * currentColors.length)]; } while (newColor === leftColor);
+                                block.right[pIdx].color = newColor;
+                            } else { block.right[pIdx].color = currentColors[Math.floor(rng() * currentColors.length)]; }
                         }
-                    } else {
-                        if (leftColor) {
-                            let newColor;
-                            do { newColor = currentColors[Math.floor(rng() * currentColors.length)]; } while (newColor === leftColor);
-                            block.right[pIdx].color = newColor;
-                        } else {
-                            block.right[pIdx].color = currentColors[Math.floor(rng() * currentColors.length)];
-                        }
-                    }
-                });
+                    });
+                }
             });
 
-            renderBoard(); // 瞬间渲染
+            if (isCubeMode) {
+                drawCubeBoard();
+            } else {
+                renderDomBoard();
+            }
+            
             document.getElementById('game-container').scrollTop = 0;
             startTimer();
         }
@@ -999,32 +1439,40 @@
             if (!state.isPlaying || state.isShowingAnswer) return;
 
             if (state.isPractice) {
-                const otherSideBlocks = (side === 'left' ? rightWall : leftWall).children;
                 const idx = state.selectedIds.indexOf(blockData.id);
                 
                 if (idx > -1) {
                     state.selectedIds.splice(idx, 1);
-                    blockEl.classList.remove('selected');
-                    otherSideBlocks[blockData.id].classList.remove('selected');
-                    updateUI();
                 } else {
                     if (state.selectedIds.length >= state.diffCount) {
                         showToast('已选满，请取消后再选', false);
                         return;
                     }
                     state.selectedIds.push(blockData.id);
-                    blockEl.classList.add('selected');
-                    otherSideBlocks[blockData.id].classList.add('selected');
-                    updateUI();
-                    
-                    if (state.selectedIds.length === state.diffCount) {
-                        let allCorrect = state.selectedIds.every(id => state.grid[id].isDifferent);
-                        if (allCorrect) {
-                            state.isPlaying = false;
-                            state.hasActiveGame = false;
-                            stopTimer();
-                            showToast(`练习成功！全部找对！<br>题号：${levelIdDisplay.textContent}<br>用时：${timerDisplay.textContent}`, true, false);
-                        }
+                }
+                
+                updateUI();
+                
+                if (isCubeMode) {
+                    drawCubeBoard();
+                } else {
+                    const otherSideDom = (side === 'left' ? rightWallDom : leftWallDom).children;
+                    if (idx > -1) {
+                        blockEl.classList.remove('selected');
+                        otherSideDom[blockData.id].classList.remove('selected');
+                    } else {
+                        blockEl.classList.add('selected');
+                        otherSideDom[blockData.id].classList.add('selected');
+                    }
+                }
+                
+                if (state.selectedIds.length === state.diffCount) {
+                    let allCorrect = state.selectedIds.every(id => state.grid[id].isDifferent);
+                    if (allCorrect) {
+                        state.isPlaying = false;
+                        state.hasActiveGame = false;
+                        stopTimer();
+                        showToast(`练习成功！全部找对！<br>题号：${levelIdDisplay.textContent}<br>用时：${timerDisplay.textContent}`, true, false);
                     }
                 }
             } else {
@@ -1033,9 +1481,13 @@
                     state.found++;
                     state.remaining--;
                     
-                    blockEl.classList.add('found');
-                    const otherSideBlocks = (side === 'left' ? rightWall : leftWall).children;
-                    otherSideBlocks[blockData.id].classList.add('found');
+                    if (isCubeMode) {
+                        drawCubeBoard();
+                    } else {
+                        blockEl.classList.add('found');
+                        const otherSideDom = (side === 'left' ? rightWallDom : leftWallDom).children;
+                        otherSideDom[blockData.id].classList.add('found');
+                    }
 
                     updateUI();
 
@@ -1048,8 +1500,11 @@
                 } else {
                     state.mistakes++;
                     updateUI();
-                    blockEl.style.transform = 'scale(0.85)'; // 极速缩放反馈
-                    setTimeout(() => blockEl.style.transform = 'scale(1)', 100);
+                    
+                    if (!isCubeMode && blockEl) {
+                        blockEl.style.transform = 'scale(0.85)';
+                        setTimeout(() => blockEl.style.transform = 'scale(1)', 100);
+                    }
                 }
             }
         }
@@ -1124,29 +1579,31 @@
             if (!state.isPractice || !state.isPlaying) return;
             state.isShowingAnswer = !state.isShowingAnswer;
             
-            if (state.isShowingAnswer) {
-                state.grid.forEach((blockData, i) => {
-                    if (blockData.isDifferent) {
-                        leftWall.children[i].classList.add('show-answer');
-                        rightWall.children[i].classList.add('show-answer');
-                    }
-                });
-                answerBtn.style.color = '#facc15'; 
+            if (isCubeMode) {
+                drawCubeBoard();
             } else {
                 state.grid.forEach((blockData, i) => {
-                    leftWall.children[i].classList.remove('show-answer');
-                    rightWall.children[i].classList.remove('show-answer');
+                    if (blockData.isDifferent) {
+                        if (state.isShowingAnswer) {
+                            leftWallDom.children[i].classList.add('show-answer');
+                            rightWallDom.children[i].classList.add('show-answer');
+                        } else {
+                            leftWallDom.children[i].classList.remove('show-answer');
+                            rightWallDom.children[i].classList.remove('show-answer');
+                        }
+                    }
                 });
-                answerBtn.style.color = '#fff';
             }
+            answerBtn.style.color = state.isShowingAnswer ? '#facc15' : '#fff';
         });
 
         document.getElementById('settings-btn').addEventListener('click', () => {
-            setSizeInput.value = settings.size;
-            setDiffInput.value = settings.diffInput;
-            setColorCountInput.value = settings.colorCount; 
-            setMiniInput.checked = !settings.isMini; 
-            setPracticeInput.checked = settings.isPractice;
+            const active = getActiveSettings();
+            setSizeInput.value = active.size;
+            setDiffInput.value = active.diffInput;
+            setColorCountInput.value = active.colorCount; 
+            setMiniInput.checked = !active.isMini; 
+            setPracticeInput.checked = active.isPractice;
             updateDisplayModeText(); 
             updatePlayModeText();
             settingsModal.classList.remove('hidden');
@@ -1156,9 +1613,17 @@
 
         settingsConfirm.addEventListener('click', () => {
             let newSize = parseInt(setSizeInput.value);
-            if (isNaN(newSize) || newSize < 4 || newSize > 12) {
-                showToast('盘面大小必须在 4-12 之间', false);
-                return;
+            
+            if (isCubeMode) {
+                if (isNaN(newSize) || newSize < 5 || newSize > 100) {
+                    showToast('魔方模式盘面大小必须在 5-100 之间', false);
+                    return;
+                }
+            } else {
+                if (isNaN(newSize) || newSize < 4 || newSize > 12) {
+                    showToast('色块模式盘面大小必须在 4-12 之间', false);
+                    return;
+                }
             }
 
             let newDiff = setDiffInput.value.trim();
@@ -1173,18 +1638,25 @@
                 return;
             }
 
-            settings.size = newSize;
-            settings.diffInput = newDiff;
-            settings.colorCount = newColorCount; 
-            settings.isMini = !setMiniInput.checked; 
-            settings.isPractice = setPracticeInput.checked;
+            if (isCubeMode) {
+                settingsCube.size = newSize;
+                settingsCube.diffInput = newDiff;
+                settingsCube.colorCount = newColorCount;
+                settingsCube.isPractice = setPracticeInput.checked;
+            } else {
+                settingsBlock.size = newSize;
+                settingsBlock.diffInput = newDiff;
+                settingsBlock.colorCount = newColorCount;
+                settingsBlock.isMini = !setMiniInput.checked;
+                settingsBlock.isPractice = setPracticeInput.checked;
+            }
             
             settingsModal.classList.add('hidden');
             
-            state.rows = settings.size;
-            state.cols = settings.size;
+            state.rows = newSize;
+            state.cols = newSize;
             
-            resetBoardToEmpty(); // 此时会完美重置状态栏并清空
+            resetBoardToEmpty();
         });
 
         helpBtn.addEventListener('click', () => helpModal.classList.remove('hidden'));
@@ -1244,6 +1716,10 @@
                 e.preventDefault();
             }
         }, { passive: false });
+
+        window.addEventListener('resize', () => {
+            if (isCubeMode) resizeCanvas();
+        });
 
         resetBoardToEmpty();
     </script>
