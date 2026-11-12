@@ -6,9 +6,9 @@
     <style>
         :root {
             --bg-color: #0b0e14;
-            --panel-bg: #131724;
-            --block-bg: #1a1f30;
-            --block-border: #2a3045;
+            --panel-bg: #0d111a;
+            --block-bg: #1e2437;
+            --block-border: #353f5c;
             --dot-off: #2c324a;
             --text-main: #e2e8f0;
             --text-found: #facc15;
@@ -35,6 +35,7 @@
             height: 100vh;
             height: 100dvh;
             width: 100vw;
+            overflow: hidden;
         }
 
         /* 顶部固定控制按钮 */
@@ -67,7 +68,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            flex-shrink: 0;
+            flex-shrink: 0; 
             width: 100%;
             padding-top: 8px;
             transition: all 0.3s;
@@ -155,10 +156,7 @@
         .text-remaining { color: var(--text-remaining); }
         .text-mistake { color: var(--text-mistake); }
 
-        /* 练习模式隐藏失误 */
-        body.practice-mode .mistake-container {
-            display: none;
-        }
+        body.practice-mode .mistake-container { display: none; }
 
         /* --- 全屏模式精简UI --- */
         body.is-fullscreen .top-ui { padding-top: 2px; }
@@ -176,97 +174,146 @@
             flex: 1;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: center; 
             width: 100%;
-            min-height: 0;
-            padding: 4px;
+            min-height: 0; 
             overflow: hidden; 
             gap: 2vmin; 
             transition: all 0.3s;
         }
 
         .wall {
-            background: var(--panel-bg);
-            border: 1px solid var(--block-border);
-            border-radius: 8px;
-            padding: 0.5vmin;
+            background: var(--panel-bg); 
+            border: 1px solid #1e2437;
+            border-radius: 12px;
+            padding: 0.8vmin;
             display: grid;
-            gap: 0.5vmin; 
-            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+            gap: 0.8vmin; /* 方块间距，露出更深的背景 */
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9);
             box-sizing: border-box;
             aspect-ratio: 1 / 1; 
-            min-width: 0;
-            min-height: 0;
-            flex-shrink: 0;
+            flex-shrink: 0; 
         }
 
+        /* --- 核心：厚度玻璃罩容器 --- */
         .block {
+            position: relative;
             background: var(--block-bg);
-            border: 1px solid #3b445c; 
-            border-radius: 3px;
+            border-radius: 10px; /* 明显的圆角 */
+            /* 加粗边框，体现容器厚度 */
+            border: 2px solid var(--block-border); 
+            
+            /* 外凸阴影 + 内部顶部深色阴影 */
+            box-shadow: 
+                0 3px 6px rgba(0, 0, 0, 0.4), 
+                inset 0 4px 8px rgba(0, 0, 0, 0.4), 
+                inset 0 -2px 4px rgba(255, 255, 255, 0.05);
+                
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             grid-template-rows: repeat(3, minmax(0, 1fr));
-            padding: 1px; 
-            gap: 1px; 
+            
+            /* 加大内边距，留出容器边缘，内部无间隙 */
+            padding: 12%; 
+            gap: 0px; 
+            
             cursor: pointer;
-            transition: all 0.1s ease;
+            transition: all 0.15s ease;
             min-width: 0;
             min-height: 0;
             aspect-ratio: 1 / 1;
             overflow: hidden;
         }
 
+        /* 玻璃罩表面的斜向反光罩（核心蒙版） */
+        .block::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: inherit;
+            background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 40%, rgba(0,0,0,0.1) 100%);
+            pointer-events: none; 
+            z-index: 10;
+            /* 给玻璃罩增加一点点内发光 */
+            box-shadow: inset 1px 1px 2px rgba(255,255,255,0.2), inset -1px -1px 2px rgba(0,0,0,0.5);
+        }
+
+        /* 悬浮态 */
         .block:hover {
-            border-color: #6b7280;
-            box-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+            border-color: #4a5678;
+            box-shadow: 
+                0 4px 10px rgba(0, 0, 0, 0.5), 
+                inset 0 4px 8px rgba(0, 0, 0, 0.4), 
+                inset 0 -2px 4px rgba(255, 255, 255, 0.1);
             z-index: 1;
         }
 
+        /* 状态融入光效 */
         .block.found {
             border-color: var(--success-glow);
-            box-shadow: 0 0 6px var(--success-glow);
+            box-shadow: 
+                0 0 12px rgba(74, 222, 128, 0.5),
+                inset 0 4px 8px rgba(0, 0, 0, 0.4), 
+                inset 0 -2px 4px rgba(255, 255, 255, 0.1);
             cursor: default;
             pointer-events: none;
         }
 
         .block.selected {
             border-color: #facc15;
-            box-shadow: 0 0 8px #facc15;
+            box-shadow: 
+                0 0 12px rgba(250, 204, 21, 0.5),
+                inset 0 4px 8px rgba(0, 0, 0, 0.4), 
+                inset 0 -2px 4px rgba(255, 255, 255, 0.1);
         }
 
-        /* 答案层级要高于选择，以便覆盖显示 */
         .block.show-answer {
             border-color: #3b82f6;
-            box-shadow: 0 0 8px #3b82f6;
+            box-shadow: 
+                0 0 12px rgba(59, 130, 246, 0.6),
+                inset 0 4px 8px rgba(0, 0, 0, 0.4), 
+                inset 0 -2px 4px rgba(255, 255, 255, 0.1);
             z-index: 2;
         }
 
+        /* --- 饱满紧致的球体 --- */
         .dot {
+            /* 撑满格子，因为gap为0，彼此紧靠 */
+            width: 84%; 
+            height: 84%;
             border-radius: 50%;
             margin: auto;
             background-color: var(--dot-off);
             box-sizing: border-box;
             transition: background-color 0.2s ease;
             aspect-ratio: 1 / 1;
+            z-index: 5;
+            
+            /* 球体立体光影，强化厚度感 */
+            box-shadow: 
+                inset -2px -2px 4px rgba(0,0,0,0.8), 
+                inset 2px 2px 3px rgba(255,255,255,0.5),
+                0 2px 4px rgba(0,0,0,0.6);
         }
 
+        /* 迷你模式适配 */
         body.is-mini .block {
-            padding: 0px; 
-            gap: 0px;
-            border-radius: 2px;
+            padding: 8%; 
+            border-width: 1px; /* 迷你模式边框变细 */
+            border-radius: 6px;
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.4), 
+                inset 0 2px 4px rgba(0, 0, 0, 0.4), 
+                inset 0 -1px 2px rgba(255, 255, 255, 0.05);
         }
+        
         body.is-mini .dot {
-            width: 90%; 
-            height: 90%;
-            margin: auto;
-            box-shadow: none; 
-        }
-
-        body:not(.is-mini) .dot {
-            width: 75%; 
-            height: 75%;
-            box-shadow: inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px rgba(255,255,255,0.15);
+            width: 86%; 
+            height: 86%;
+            box-shadow: 
+                inset -1px -1px 2px rgba(0,0,0,0.8), 
+                inset 1px 1px 2px rgba(255,255,255,0.4),
+                0 1px 2px rgba(0,0,0,0.5);
         }
 
         /* =========================================================
@@ -291,18 +338,36 @@
         }
 
         @media (orientation: portrait) {
-            body.is-mini .game-container { flex-direction: row; }
-            body.is-mini .wall { width: 48%; height: auto; max-height: 100%; }
+            body.is-mini .game-container { 
+                flex-direction: row; 
+                justify-content: center;
+                overflow-y: auto;
+                overflow-x: hidden;
+                align-items: flex-start; 
+                padding: 10px 0; 
+                overscroll-behavior: contain;
+            }
+            body.is-mini .wall { width: 48%; height: auto; }
 
-            body:not(.is-mini):not(.is-fullscreen) .game-container { flex-direction: column; gap: 2vh; }
-            body:not(.is-mini):not(.is-fullscreen) .wall { flex: 1; height: 0; width: auto; max-width: 90%; margin: 0 auto; }
+            body:not(.is-mini):not(.is-fullscreen) .game-container { 
+                flex-direction: column; 
+                gap: 2vh; 
+                overflow: hidden;
+            }
+            body:not(.is-mini):not(.is-fullscreen) .wall { 
+                flex: 1; 
+                height: 0; 
+                width: auto; 
+                max-width: 90%; 
+                margin: 0 auto; 
+            }
 
             body:not(.is-mini).is-fullscreen .game-container { flex-direction: column; gap: 2vh; }
             body:not(.is-mini).is-fullscreen .wall { width: 100%; max-width: min(100%, 45vh); height: auto; margin: 0 auto; }
         }
 
         /* =========================================================
-           弹窗样式
+           弹窗与提示
            ========================================================= */
         .modal-overlay {
             position: fixed;
@@ -546,10 +611,18 @@
     </div>
 
     <script>
+        // 全新的 10 种高对比度、低亮度刺眼感配色
         const ALL_COLORS = [
-            '#c0392b', '#d35400', '#b8a000', '#27ae60', 
-            '#2980b9', '#17a589', '#8e44ad', '#d53b8f', 
-            '#8b4513', '#7f8c8d'
+            '#E74C3C', // 红
+            '#F39C12', // 橙
+            '#F1C40F', // 黄
+            '#2ECC71', // 绿
+            '#1ABC9C', // 青
+            '#3498DB', // 蓝
+            '#9B59B6', // 紫
+            '#FF6B81', // 粉
+            '#8B4513', // 棕
+            '#95A5A6'  // 灰
         ];
         
         let settings = {
@@ -682,7 +755,6 @@
         textChallenge.addEventListener('click', () => { setPracticeInput.checked = false; updatePlayModeText(); });
         textPractice.addEventListener('click', () => { setPracticeInput.checked = true; updatePlayModeText(); });
 
-        // 更新顶部显示的模式文字
         function updateTopModeDisplay() {
             const prefix = settings.isMini ? '迷你' : '加大';
             const suffix = settings.isPractice ? '练习模式' : '挑战模式';
@@ -699,7 +771,6 @@
             levelIdDisplay.textContent = "------";
             startBtn.innerHTML = '开始游戏';
             
-            // 根据最新设置同步顶部文字
             updateTopModeDisplay();
 
             if (settings.isPractice) {
@@ -849,7 +920,7 @@
             state.selectedIds = [];
             state.isShowingAnswer = false;
             
-            updateTopModeDisplay(); // 更新文字显示
+            updateTopModeDisplay(); 
 
             if (state.isPractice) {
                 document.body.classList.add('practice-mode');
@@ -912,6 +983,7 @@
             });
 
             renderBoard();
+            document.getElementById('game-container').scrollTop = 0;
             startTimer();
         }
 
@@ -1071,13 +1143,11 @@
             if (e.key === 'Enter') modalConfirm.click();
         });
 
-        // 修改后的查看答案逻辑
         answerBtn.addEventListener('click', () => {
             if (!state.isPractice || !state.isPlaying) return;
             state.isShowingAnswer = !state.isShowingAnswer;
             
             if (state.isShowingAnswer) {
-                // 无论玩家选没选，只要是不同之处，全部无条件显示蓝框
                 state.grid.forEach(blockData => {
                     if (blockData.isDifferent) {
                         leftWall.children[blockData.id].classList.add('show-answer');
@@ -1086,7 +1156,6 @@
                 });
                 answerBtn.style.color = '#facc15'; 
             } else {
-                // 隐藏所有蓝框，玩家原本的黄框自然显现
                 state.grid.forEach(blockData => {
                     leftWall.children[blockData.id].classList.remove('show-answer');
                     rightWall.children[blockData.id].classList.remove('show-answer');
@@ -1138,7 +1207,6 @@
             state.rows = settings.size;
             state.cols = settings.size;
             
-            // 应用后清空盘面，此时同时更新顶部显示
             resetBoardToEmpty();
         });
 
@@ -1164,7 +1232,6 @@
             setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 50);
         });
 
-        // 锁定与解锁
         lockBtn.addEventListener('click', () => {
             isLocked = !isLocked;
             lockBtn.textContent = isLocked ? '🔒' : '🔓';
