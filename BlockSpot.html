@@ -376,8 +376,8 @@
             body:not(.is-mini).is-fullscreen .game-container { flex-direction: column; gap: 2vh; }
             body:not(.is-mini).is-fullscreen .wall-dom { width: 100%; max-width: min(100%, 45vh); height: auto; margin: 0 auto; }
 
-            /* 魔方模式竖屏 */
-            body.cube-mode .game-container {
+            /* 魔方模式竖屏（全屏）：保持不变 */
+            body.cube-mode.is-fullscreen .game-container {
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
@@ -386,10 +386,27 @@
                 height: 100%;
                 overflow: hidden;
             }
-            body.cube-mode .cube-board-wrapper {
+            body.cube-mode.is-fullscreen .cube-board-wrapper {
                 width: 90%;
                 height: auto;
                 max-width: 100%;
+                flex-shrink: 0;
+                aspect-ratio: 1 / 1;
+            }
+
+            /* 魔方模式竖屏（非全屏）：修复截断，允许滚动 */
+            body.cube-mode:not(.is-fullscreen) .game-container {
+                flex-direction: column;
+                justify-content: flex-start;
+                align-items: center;
+                gap: 20px;
+                padding: 15px 0;
+                height: 100%;
+                overflow-y: auto;
+            }
+            body.cube-mode:not(.is-fullscreen) .cube-board-wrapper {
+                width: 96%;
+                height: auto;
                 flex-shrink: 0;
                 aspect-ratio: 1 / 1;
             }
@@ -603,8 +620,8 @@
         <h1 class="game-title" id="main-title">
             <span id="char1" class="title-char">色</span>
             <span id="char2" class="title-char">块</span>
-            <span class="title-char">寻</span>
-            <span class="title-char">异</span>
+            <span id="char3" class="title-char">寻</span>
+            <span id="char4" class="title-char">异</span>
         </h1>
         <div class="controls">
             <button class="btn btn-start" id="start-btn">开始游戏</button>
@@ -670,7 +687,6 @@
             selectedIds: [], 
             isShowingAnswer: false,
             hasActiveGame: false,
-            // 缩放与平移状态
             zoom: 1,
             panX: 0,
             panY: 0
@@ -785,6 +801,8 @@
         // ==========================================
         const char1 = document.getElementById('char1');
         const char2 = document.getElementById('char2');
+        const char3 = document.getElementById('char3');
+        const char4 = document.getElementById('char4');
 
         char1.addEventListener('click', () => {
             char1.textContent = char1.textContent === '色' ? '魔' : '色';
@@ -796,12 +814,22 @@
             checkModeChange();
         });
 
+        char3.addEventListener('click', () => {
+            char3.textContent = char3.textContent === '寻' ? '找' : '寻';
+            checkModeChange();
+        });
+
+        char4.addEventListener('click', () => {
+            char4.textContent = char4.textContent === '异' ? '茬' : '异';
+            checkModeChange();
+        });
+
         function checkModeChange() {
-            if (char1.textContent === '魔' && char2.textContent === '方') {
+            if (char1.textContent === '魔' && char2.textContent === '方' && char3.textContent === '找' && char4.textContent === '茬') {
                 if (!isCubeMode) {
                     isCubeMode = true;
                     document.body.classList.add('cube-mode');
-                    document.title = "魔方寻异";
+                    document.title = "魔方找茬";
                     
                     labelSize.textContent = '盘面大小 (5-100)';
                     setSizeInput.min = 5;
@@ -827,7 +855,7 @@
                     `;
                     resetBoardToEmpty();
                 }
-            } else if (char1.textContent === '色' && char2.textContent === '块') {
+            } else if (char1.textContent === '色' && char2.textContent === '块' && char3.textContent === '寻' && char4.textContent === '异') {
                 if (isCubeMode) {
                     isCubeMode = false;
                     document.body.classList.remove('cube-mode');
@@ -945,9 +973,7 @@
             axisLeftRight.width = Math.floor(axisSize * dpr);
             axisLeftRight.height = Math.floor(gridSize * dpr);
 
-            // 应用边界限制（防止屏幕缩放时导致画面跑偏）
             applyPanLimits();
-
             drawCubeBoard();
             drawAxes();
         }
@@ -956,11 +982,7 @@
             if (!isCubeMode) return;
             
             const cols = settingsCube.size;
-
-            ctxAxisTopLeft.setTransform(1, 0, 0, 1, 0, 0);
-            ctxAxisTopRight.setTransform(1, 0, 0, 1, 0, 0);
-            ctxAxisLeftLeft.setTransform(1, 0, 0, 1, 0, 0);
-            ctxAxisLeftRight.setTransform(1, 0, 0, 1, 0, 0);
+            const dpr = window.devicePixelRatio || 1;
 
             ctxAxisTopLeft.clearRect(0, 0, axisTopLeft.width, axisTopLeft.height);
             ctxAxisTopRight.clearRect(0, 0, axisTopRight.width, axisTopRight.height);
@@ -968,11 +990,15 @@
             ctxAxisLeftRight.clearRect(0, 0, axisLeftRight.width, axisLeftRight.height);
 
             const fontSize = Math.max(10, Math.min(16, cellSize * 0.6));
-            const dpr = window.devicePixelRatio || 1;
             
+            // 判断当前缩放后的有效格子尺寸，如果太小（<18px）才进入紧凑模式
+            const effectiveCellSize = cellSize * state.zoom;
+            const isCompact = effectiveCellSize < 18; 
+
+            // === 顶部列号 (X轴) 纯坐标计算 ===
             ctxAxisTopLeft.font = `${fontSize * dpr}px monospace`;
             ctxAxisTopLeft.fillStyle = '#cbd5e1';
-            ctxAxisTopLeft.textAlign = 'center';
+            ctxAxisTopLeft.textAlign = 'left'; // 改为左对齐，依靠 measureText 精确居中
             ctxAxisTopLeft.textBaseline = 'middle';
 
             ctxAxisTopRight.font = ctxAxisTopLeft.font;
@@ -980,40 +1006,45 @@
             ctxAxisTopRight.textAlign = ctxAxisTopLeft.textAlign;
             ctxAxisTopRight.textBaseline = ctxAxisTopLeft.textBaseline;
 
-            ctxAxisLeftLeft.font = ctxAxisTopLeft.font;
-            ctxAxisLeftLeft.fillStyle = ctxAxisTopLeft.fillStyle;
-            ctxAxisLeftLeft.textAlign = 'center';
-            ctxAxisLeftLeft.textBaseline = 'middle';
-
-            ctxAxisLeftRight.font = ctxAxisTopLeft.font;
-            ctxAxisLeftRight.fillStyle = ctxAxisTopLeft.fillStyle;
-            ctxAxisLeftRight.textAlign = ctxAxisLeftLeft.textAlign;
-            ctxAxisLeftRight.textBaseline = ctxAxisLeftLeft.textBaseline;
-
-            const isLarge = cols > 20;
-
             for (let i = 0; i < cols; i++) {
-                const x = i * cellSize * dpr + (cellSize * dpr) / 2;
+                const baseX = i * cellSize * dpr + (cellSize * dpr) / 2;
+                const centerX = baseX * state.zoom + state.panX * dpr;
                 const val = i + 1;
+                const text = String(val);
+                const textWidth = ctxAxisTopLeft.measureText(text).width;
                 
-                if (!isLarge) {
-                    ctxAxisTopLeft.fillText(val, x, axisTopLeft.height / 2);
-                    ctxAxisTopRight.fillText(val, x, axisTopRight.height / 2);
+                // 计算文字左边界以实现真正的居中
+                let drawX = centerX - textWidth / 2;
+                
+                if (centerX < -textWidth || centerX > axisTopLeft.width + textWidth) continue;
+
+                // 边缘防截断修正
+                if (val === cols && drawX + textWidth > axisTopLeft.width) {
+                    drawX = axisTopLeft.width - textWidth - 2 * dpr;
+                }
+                if (val === 1 && drawX < 0) {
+                    drawX = 2 * dpr;
+                }
+
+                if (!isCompact) {
+                    // 放大后空间足够，直接显示所有数字
+                    ctxAxisTopLeft.fillText(text, drawX, axisTopLeft.height / 2);
+                    ctxAxisTopRight.fillText(text, drawX, axisTopRight.height / 2);
                 } else {
-                    if (val === 1 || val % 10 === 1) {
-                        ctxAxisTopLeft.fillText(val, x, axisTopLeft.height / 2);
-                        ctxAxisTopRight.fillText(val, x, axisTopRight.height / 2);
+                    if (val % 10 === 0 || val === cols) {
+                        ctxAxisTopLeft.fillText(text, drawX, axisTopLeft.height / 2);
+                        ctxAxisTopRight.fillText(text, drawX, axisTopRight.height / 2);
                     } else {
                         ctxAxisTopLeft.beginPath();
-                        ctxAxisTopLeft.moveTo(x, axisTopLeft.height - 4 * dpr);
-                        ctxAxisTopLeft.lineTo(x, axisTopLeft.height);
+                        ctxAxisTopLeft.moveTo(centerX, axisTopLeft.height - 4 * dpr);
+                        ctxAxisTopLeft.lineTo(centerX, axisTopLeft.height);
                         ctxAxisTopLeft.strokeStyle = '#64748b';
                         ctxAxisTopLeft.lineWidth = 1 * dpr;
                         ctxAxisTopLeft.stroke();
                         
                         ctxAxisTopRight.beginPath();
-                        ctxAxisTopRight.moveTo(x, axisTopRight.height - 4 * dpr);
-                        ctxAxisTopRight.lineTo(x, axisTopRight.height);
+                        ctxAxisTopRight.moveTo(centerX, axisTopRight.height - 4 * dpr);
+                        ctxAxisTopRight.lineTo(centerX, axisTopRight.height);
                         ctxAxisTopRight.strokeStyle = '#64748b';
                         ctxAxisTopRight.lineWidth = 1 * dpr;
                         ctxAxisTopRight.stroke();
@@ -1021,28 +1052,54 @@
                 }
             }
 
+            // === 左侧行号 (Y轴) 纯坐标计算 ===
+            ctxAxisLeftLeft.font = `${fontSize * dpr}px monospace`;
+            ctxAxisLeftLeft.fillStyle = '#cbd5e1';
+            ctxAxisLeftLeft.textAlign = 'center';
+            ctxAxisLeftLeft.textBaseline = 'middle';
+
+            ctxAxisLeftRight.font = ctxAxisLeftLeft.font;
+            ctxAxisLeftRight.fillStyle = ctxAxisLeftLeft.fillStyle;
+            ctxAxisLeftRight.textAlign = ctxAxisLeftLeft.textAlign;
+            ctxAxisLeftRight.textBaseline = ctxAxisLeftLeft.textBaseline;
+
             for (let i = 0; i < cols; i++) {
-                const y = i * cellSize * dpr + (cellSize * dpr) / 2;
+                const baseY = i * cellSize * dpr + (cellSize * dpr) / 2;
+                const centerY = baseY * state.zoom + state.panY * dpr;
                 const val = i + 1;
+                const text = String(val);
+                const textHeight = fontSize * dpr;
+
+                if (centerY < -textHeight || centerY > axisLeftLeft.height + textHeight) continue;
+
+                let drawY = centerY;
                 
-                if (!isLarge) {
-                    ctxAxisLeftLeft.fillText(val, axisLeftLeft.width / 2, y);
-                    ctxAxisLeftRight.fillText(val, axisLeftRight.width / 2, y);
+                // 边缘防截断修正
+                if (val === cols && drawY + textHeight / 2 > axisLeftLeft.height) {
+                    drawY = axisLeftLeft.height - textHeight / 2 - 2 * dpr;
+                }
+                if (val === 1 && drawY - textHeight / 2 < 0) {
+                    drawY = textHeight / 2 + 2 * dpr;
+                }
+
+                if (!isCompact) {
+                    ctxAxisLeftLeft.fillText(text, axisLeftLeft.width / 2, drawY);
+                    ctxAxisLeftRight.fillText(text, axisLeftRight.width / 2, drawY);
                 } else {
-                    if (val === 1 || val % 10 === 1) {
-                        ctxAxisLeftLeft.fillText(val, axisLeftLeft.width / 2, y);
-                        ctxAxisLeftRight.fillText(val, axisLeftRight.width / 2, y);
+                    if (val % 10 === 0 || val === cols) {
+                        ctxAxisLeftLeft.fillText(text, axisLeftLeft.width / 2, drawY);
+                        ctxAxisLeftRight.fillText(text, axisLeftRight.width / 2, drawY);
                     } else {
                         ctxAxisLeftLeft.beginPath();
-                        ctxAxisLeftLeft.moveTo(axisLeftLeft.width - 4 * dpr, y);
-                        ctxAxisLeftLeft.lineTo(axisLeftLeft.width, y);
+                        ctxAxisLeftLeft.moveTo(axisLeftLeft.width - 4 * dpr, centerY);
+                        ctxAxisLeftLeft.lineTo(axisLeftLeft.width, centerY);
                         ctxAxisLeftLeft.strokeStyle = '#64748b';
                         ctxAxisLeftLeft.lineWidth = 1 * dpr;
                         ctxAxisLeftLeft.stroke();
                         
                         ctxAxisLeftRight.beginPath();
-                        ctxAxisLeftRight.moveTo(axisLeftRight.width - 4 * dpr, y);
-                        ctxAxisLeftRight.lineTo(axisLeftRight.width, y);
+                        ctxAxisLeftRight.moveTo(axisLeftRight.width - 4 * dpr, centerY);
+                        ctxAxisLeftRight.lineTo(axisLeftRight.width, centerY);
                         ctxAxisLeftRight.strokeStyle = '#64748b';
                         ctxAxisLeftRight.lineWidth = 1 * dpr;
                         ctxAxisLeftRight.stroke();
@@ -1066,7 +1123,6 @@
             ctxRight.fillStyle = '#000000';
             ctxRight.fillRect(0, 0, physicalW, physicalH);
 
-            // 应用缩放与平移（修复：必须乘以 dpr，否则平移量会缩小，导致无法拖到边界）
             ctxLeft.save();
             ctxLeft.translate(state.panX * dpr, state.panY * dpr);
             ctxLeft.scale(state.zoom, state.zoom);
@@ -1135,7 +1191,6 @@
             ctxRight.restore();
         }
 
-        // 边界限制，防止拖拽露黑边
         function applyPanLimits() {
             if (!isCubeMode) return;
             if (state.zoom <= 1) {
@@ -1156,7 +1211,6 @@
             if (state.panY < minPanY) state.panY = minPanY;
         }
 
-        // 统一管理点击防误触逻辑
         let hasDragged = false;
 
         canvasLeft.addEventListener('click', (e) => {
@@ -1196,7 +1250,7 @@
         // 手势操作：双指缩放 + 单指拖拽
         // ==========================================
         const gameContainer = document.getElementById('game-container');
-        let interactionMode = null; // 'pan' | 'pinch'
+        let interactionMode = null; 
         
         let initialPinchDistance = 0;
         let initialZoom = 1;
@@ -1246,7 +1300,7 @@
                 
                 if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
                     hasDragged = true;
-                    if (e.cancelable) e.preventDefault(); // 阻止默认滚动
+                    if (e.cancelable) e.preventDefault(); 
                 }
                 
                 if (hasDragged && state.zoom > 1) {
@@ -1254,6 +1308,7 @@
                     state.panY = startPanY + dy;
                     applyPanLimits();
                     drawCubeBoard();
+                    drawAxes(); // 同步更新刻度轴
                 }
             } else if (interactionMode === 'pinch' && e.touches.length === 2) {
                 if (e.cancelable) e.preventDefault();
@@ -1284,6 +1339,7 @@
                     state.panY = newPanY;
                     applyPanLimits();
                     drawCubeBoard();
+                    drawAxes(); // 同步更新刻度轴
                 }
             }
         }, { passive: false });
@@ -1298,13 +1354,13 @@
                     state.panX = 0;
                     state.panY = 0;
                     drawCubeBoard();
+                    drawAxes();
                 }
             } else if (e.touches.length === 0 && interactionMode === 'pan') {
                 interactionMode = null;
             }
         });
 
-        // 桌面端鼠标拖拽支持
         gameContainer.addEventListener('mousedown', (e) => {
             if (!isCubeMode || isLocked || e.button !== 0) return;
             if (state.zoom > 1) {
@@ -1329,6 +1385,7 @@
                 state.panY = startPanY + dy;
                 applyPanLimits();
                 drawCubeBoard();
+                drawAxes();
             }
         });
 
@@ -1336,7 +1393,6 @@
             if (interactionMode === 'pan') interactionMode = null;
         });
 
-        // 桌面端滚轮缩放支持
         gameContainer.addEventListener('wheel', (e) => {
             if (!isCubeMode || isLocked) return;
             e.preventDefault();
@@ -1349,7 +1405,6 @@
                 state.panX = 0;
                 state.panY = 0;
             } else {
-                // 以鼠标位置为中心缩放
                 const canvasRect = canvasLeft.getBoundingClientRect();
                 const isRight = e.clientX > canvasRect.right;
                 const refRect = isRight ? canvasRight.getBoundingClientRect() : canvasRect;
@@ -1363,6 +1418,7 @@
                 applyPanLimits();
             }
             drawCubeBoard();
+            drawAxes();
         }, { passive: false });
 
         // ==========================================
