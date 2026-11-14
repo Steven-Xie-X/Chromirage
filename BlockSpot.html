@@ -279,11 +279,13 @@
         body.cube-mode .cube-board-wrapper { display: flex; }
         body.cube-mode .game-container { gap: 2vw; }
 
-        /* 坐标轴网格布局 */
+        /* 坐标轴网格布局：修复水平/垂直未完全居中问题 */
         .cube-inner-wrapper {
             display: grid;
-            grid-template-columns: 24px 1fr; 
-            grid-template-rows: 24px 1fr;
+            grid-template-columns: 24px auto; 
+            grid-template-rows: 24px auto;
+            justify-content: center;
+            align-content: center;
             width: 100%;
             height: 100%;
         }
@@ -320,18 +322,18 @@
                 max-width: 48%;
             }
             
-            /* 魔方模式横屏：模拟图2完美居中 */
+            /* 魔方模式横屏：充分利用高度，去除多余留白 */
             body.cube-mode .game-container {
                 flex-direction: row;
                 justify-content: center;
                 align-items: center;
-                gap: 4vw;
-                padding: 2vh 0;
+                gap: 3vw;
+                padding: 0;
                 height: 100%;
                 overflow: hidden;
             }
             body.cube-mode .cube-board-wrapper {
-                height: 90%;
+                height: 98%;
                 width: auto;
                 max-height: 100%;
                 flex-shrink: 0;
@@ -376,39 +378,40 @@
             body:not(.is-mini).is-fullscreen .game-container { flex-direction: column; gap: 2vh; }
             body:not(.is-mini).is-fullscreen .wall-dom { width: 100%; max-width: min(100%, 45vh); height: auto; margin: 0 auto; }
 
-            /* 魔方模式竖屏（全屏）：保持不变 */
+            /* 魔方模式竖屏（全屏）：充分利用高度 */
             body.cube-mode.is-fullscreen .game-container {
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
-                gap: 2vh;
-                padding: 2vh 0;
+                gap: 1vh;
+                padding: 0;
                 height: 100%;
                 overflow: hidden;
             }
             body.cube-mode.is-fullscreen .cube-board-wrapper {
-                width: 90%;
-                height: auto;
-                max-width: 100%;
-                flex-shrink: 0;
+                width: 96%;
+                max-height: 49.5%;
                 aspect-ratio: 1 / 1;
+                flex-shrink: 1;
+                margin: 0 auto;
             }
 
-            /* 魔方模式竖屏（非全屏）：修复截断，允许滚动 */
+            /* 魔方模式竖屏（非全屏）：修复截断并完美居中 */
             body.cube-mode:not(.is-fullscreen) .game-container {
                 flex-direction: column;
-                justify-content: flex-start;
+                justify-content: center;
                 align-items: center;
-                gap: 20px;
-                padding: 15px 0;
+                gap: 1vh;
+                padding: 0;
                 height: 100%;
-                overflow-y: auto;
+                overflow: hidden;
             }
             body.cube-mode:not(.is-fullscreen) .cube-board-wrapper {
                 width: 96%;
-                height: auto;
-                flex-shrink: 0;
+                max-height: 49.5%;
                 aspect-ratio: 1 / 1;
+                flex-shrink: 1;
+                margin: 0 auto;
             }
         }
 
@@ -665,7 +668,7 @@
     </div>
 
     <script>
-        // 高对比度配色方案，前4种红绿蓝黄对比极强，之后依次加入高区分度的青、品红、橙、紫、灰、棕等
+        // 高对比度配色方案，前4种红绿蓝黄对比极强，浅灰替换为深青绿
         const ALL_COLORS = [
             '#E74C3C', // 1. 红色
             '#2ECC71', // 2. 绿色
@@ -681,7 +684,7 @@
             '#006400', // 12. 深绿
             '#00008B', // 13. 深蓝
             '#FFB6C1', // 14. 粉色
-            '#D3D3D3', // 15. 浅灰
+            '#008080', // 15. 深青绿 (替换浅灰)
             '#BDB76B'  // 16. 橄榄绿
         ];
         
