@@ -546,8 +546,8 @@
                 <input type="text" id="set-diff" value="12%">
             </div>
             <div class="form-group">
-                <label>颜色种数 (4-10)</label>
-                <input type="number" id="set-color-count" min="4" max="10" value="8">
+                <label>颜色种数 (4-16)</label>
+                <input type="number" id="set-color-count" min="4" max="16" value="8">
             </div>
             <div class="form-group" id="group-mini" style="justify-content: center;">
                 <div class="switch-container">
@@ -665,10 +665,24 @@
     </div>
 
     <script>
+        // 高对比度配色方案，前4种红绿蓝黄对比极强，之后依次加入高区分度的青、品红、橙、紫、灰、棕等
         const ALL_COLORS = [
-            '#E74C3C', '#F39C12', '#F1C40F', '#2ECC71', 
-            '#1ABC9C', '#3498DB', '#9B59B6', '#FF6B81', 
-            '#8B4513', '#95A5A6'
+            '#E74C3C', // 1. 红色
+            '#2ECC71', // 2. 绿色
+            '#3498DB', // 3. 蓝色
+            '#F1C40F', // 4. 黄色
+            '#00FFFF', // 5. 青色
+            '#FF00FF', // 6. 品红
+            '#FF8C00', // 7. 橙色
+            '#9B59B6', // 8. 紫色
+            '#808080', // 9. 灰色
+            '#8B4513', // 10. 棕色
+            '#8B0000', // 11. 深红
+            '#006400', // 12. 深绿
+            '#00008B', // 13. 深蓝
+            '#FFB6C1', // 14. 粉色
+            '#D3D3D3', // 15. 浅灰
+            '#BDB76B'  // 16. 橄榄绿
         ];
         
         let isCubeMode = false; 
@@ -991,14 +1005,13 @@
 
             const fontSize = Math.max(10, Math.min(16, cellSize * 0.6));
             
-            // 判断当前缩放后的有效格子尺寸，如果太小（<18px）才进入紧凑模式
             const effectiveCellSize = cellSize * state.zoom;
             const isCompact = effectiveCellSize < 18; 
 
             // === 顶部列号 (X轴) 纯坐标计算 ===
             ctxAxisTopLeft.font = `${fontSize * dpr}px monospace`;
             ctxAxisTopLeft.fillStyle = '#cbd5e1';
-            ctxAxisTopLeft.textAlign = 'left'; // 改为左对齐，依靠 measureText 精确居中
+            ctxAxisTopLeft.textAlign = 'left';
             ctxAxisTopLeft.textBaseline = 'middle';
 
             ctxAxisTopRight.font = ctxAxisTopLeft.font;
@@ -1013,12 +1026,10 @@
                 const text = String(val);
                 const textWidth = ctxAxisTopLeft.measureText(text).width;
                 
-                // 计算文字左边界以实现真正的居中
                 let drawX = centerX - textWidth / 2;
                 
                 if (centerX < -textWidth || centerX > axisTopLeft.width + textWidth) continue;
 
-                // 边缘防截断修正
                 if (val === cols && drawX + textWidth > axisTopLeft.width) {
                     drawX = axisTopLeft.width - textWidth - 2 * dpr;
                 }
@@ -1027,7 +1038,6 @@
                 }
 
                 if (!isCompact) {
-                    // 放大后空间足够，直接显示所有数字
                     ctxAxisTopLeft.fillText(text, drawX, axisTopLeft.height / 2);
                     ctxAxisTopRight.fillText(text, drawX, axisTopRight.height / 2);
                 } else {
@@ -1074,7 +1084,6 @@
 
                 let drawY = centerY;
                 
-                // 边缘防截断修正
                 if (val === cols && drawY + textHeight / 2 > axisLeftLeft.height) {
                     drawY = axisLeftLeft.height - textHeight / 2 - 2 * dpr;
                 }
@@ -1929,8 +1938,8 @@
             }
 
             let newColorCount = parseInt(setColorCountInput.value);
-            if (isNaN(newColorCount) || newColorCount < 4 || newColorCount > 10) {
-                showToast('颜色种数必须在 4-10 之间', false);
+            if (isNaN(newColorCount) || newColorCount < 4 || newColorCount > 16) {
+                showToast('颜色种数必须在 4-16 之间', false);
                 return;
             }
 
